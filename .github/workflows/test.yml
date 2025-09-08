@@ -13,8 +13,8 @@ jobs:
     name: First-party OIDC tests
     if: (github.event_name != 'pull_request') || !github.event.pull_request.head.repo.fork
     permissions:
-      # Needed to access the workflow's OIDC identity.
-      id-token: write
+      id-token: write # needed for first-party OIDC tests
+      contents: read # for private repos
 
     runs-on: ubuntu-latest
     steps:
@@ -26,7 +26,8 @@ jobs:
 
   test-3p:
     name: Third-party OIDC tests
-    permissions: {}
+    permissions:
+      contents: read # for private repos
 
     runs-on: ubuntu-latest
     steps:
