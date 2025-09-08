@@ -103,4 +103,21 @@ mod tests {
             _ => panic!("expected insufficient permissions error"),
         }
     }
+
+    /// Sad path: we're in GitHub Actions, but `ACTIONS_ID_TOKEN_REQUEST_TOKEN`
+    /// is unset.
+    #[tokio::test]
+    #[cfg_attr(not(feature = "test-github-1p"), ignore)]
+    async fn test_1p_github_actions_detection_missing_token() {
+        unsafe { std::env::remove_var("ACTIONS_ID_TOKEN_REQUEST_TOKEN") };
+
+        let detector = GitHubActions::new().expect("should detect GitHub Actions");
+
+        match detector.detect("sigstore").await {
+            Err(super::Error::InsufficientPermissions(what)) => {
+                assert_eq!(what, "missing ACTIONS_ID_TOKEN_REQUEST_TOKEN")
+            }
+            _ => panic!("expected insufficient permissions error"),
+        }
+    }
 }
