@@ -73,13 +73,20 @@ pub async fn detect(audience: &str) -> Result<Option<IdToken>, Error> {
 
 #[cfg(test)]
 mod tests {
-    enum EnvChange {
+    /// An environment variable delta.
+    enum EnvDelta {
+        /// Set an environment variable to a value.
         Add(String, String),
+        /// Unset an environment variable.
         Remove(String),
     }
 
+    /// A RAII guard for setting and unsetting environment variables.
+    ///
+    /// This maintains a stack of changes to unwind on drop; changes
+    /// are unwound the reverse order of application
     pub(crate) struct EnvScope {
-        changes: Vec<EnvChange>,
+        changes: Vec<EnvDelta>,
     }
 
     impl EnvScope {
@@ -91,8 +98,10 @@ mod tests {
         #[allow(unsafe_code)]
         pub fn setenv(&mut self, key: &str, value: &str) {
             match std::env::var(key) {
-                Ok(old) => self.changes.push(EnvChange::Add(key.to_string(), old)),
-                Err(_) => self.changes.push(EnvChange::Remove(key.to_string())),
+                // Key was set before; restore old value on drop.
+                Ok(old) => self.changes.push(EnvDelta::Add(key.to_string(), old)),
+                // Key was not set before; remove it on drop.
+                Err(_) => self.changes.push(EnvDelta::Remove(key.to_string())),
             }
 
             unsafe { std::env::set_var(key, value) };
@@ -102,7 +111,9 @@ mod tests {
         #[allow(unsafe_code)]
         pub fn unsetenv(&mut self, key: &str) {
             match std::env::var(key) {
-                Ok(old) => self.changes.push(EnvChange::Add(key.to_string(), old)),
+                // Key was set before; restore old value on drop.
+                Ok(old) => self.changes.push(EnvDelta::Add(key.to_string(), old)),
+                // Key was not set before; nothing to do.
                 Err(_) => {}
             }
 
@@ -113,10 +124,11 @@ mod tests {
     impl Drop for EnvScope {
         #[allow(unsafe_code)]
         fn drop(&mut self) {
+            // Unwind changes in reverse order.
             for change in self.changes.drain(..).rev() {
                 match change {
-                    EnvChange::Add(key, value) => unsafe { std::env::set_var(key, value) },
-                    EnvChange::Remove(key) => unsafe { std::env::remove_var(key) },
+                    EnvDelta::Add(key, value) => unsafe { std::env::set_var(key, value) },
+                    EnvDelta::Remove(key) => unsafe { std::env::remove_var(key) },
                 }
             }
         }

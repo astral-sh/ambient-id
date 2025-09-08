@@ -118,4 +118,12 @@ mod tests {
             _ => panic!("expected insufficient permissions error"),
         }
     }
+
+    #[test]
+    fn test_github_actions_not_detected() {
+        let mut scope = EnvScope::new();
+        scope.unsetenv("GITHUB_ACTIONS");
+
+        assert!(GitHubActions::new().is_none());
+    }
 }
