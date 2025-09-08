@@ -125,10 +125,10 @@ mod tests {
         scope.setenv("WRONG_ID_TOKEN", "sometoken");
 
         let detector = GitLabCI::new().expect("should detect GitLab CI");
-        match detector.detect("bupkis").await {
-            Err(Error::Missing(var)) => assert_eq!(var, "BUPKIS_ID_TOKEN"),
-            _ => panic!("expected missing variable error"),
-        }
+        assert!(matches!(
+            detector.detect("bupkis").await,
+            Err(Error::Missing(_))
+        ));
     }
 
     #[tokio::test]

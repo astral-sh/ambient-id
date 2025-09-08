@@ -1,4 +1,19 @@
 //! Detects ambient OIDC credentials in a variety of environments.
+//!
+//! # Supported Environments
+//!
+//! * GitHub Actions (with `id-token: write`)
+//! * GitLab CI
+//!
+//! # Usage
+//!
+//! ```rust,ignore
+//! let audience = "my-service";
+//! match ambient_id::detect(audience).await? {
+//!     Some(token) => println!("Detected ID token: {}", token.reveal()),
+//!     None => println!("No ambient ID token detected"),
+//! }
+//! ```
 
 #![deny(rustdoc::broken_intra_doc_links)]
 #![deny(missing_docs)]
@@ -10,10 +25,18 @@ mod github;
 mod gitlab;
 
 /// A detected ID token.
+///
+/// This is a newtype around a [`SecretString`] that ensures zero-on-drop
+/// semantics for the token.
+///
+/// The only way to get the token's value is via [`reveal`](IdToken::reveal).
 pub struct IdToken(SecretString);
 
 impl IdToken {
     /// Reveals the detected ID token.
+    ///
+    /// This returns a reference to the inner token, which is a secret
+    /// and must be handled with care.
     pub fn reveal(&self) -> &str {
         self.0.expose_secret()
     }
@@ -73,6 +96,16 @@ pub async fn detect(audience: &str) -> Result<Option<IdToken>, Error> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::LazyLock;
+
+    /// A global lock to ensure only one test is manipulating
+    /// environment variables at a time.
+    ///
+    /// This effectively overrides Rust's default test parallelism,
+    /// but without the user needing to explicitly pass `--test-threads=1`
+    /// or `RUST_TEST_THREADS=1`.
+    static ENV_LOCK: LazyLock<std::sync::Mutex<()>> = LazyLock::new(|| std::sync::Mutex::new(()));
+
     /// An environment variable delta.
     enum EnvDelta {
         /// Set an environment variable to a value.
@@ -86,12 +119,18 @@ mod tests {
     /// This maintains a stack of changes to unwind on drop; changes
     /// are unwound the reverse order of application
     pub(crate) struct EnvScope {
+        _guard: std::sync::MutexGuard<'static, ()>,
         changes: Vec<EnvDelta>,
     }
 
     impl EnvScope {
         pub fn new() -> Self {
-            EnvScope { changes: vec![] }
+            // Hold the global environment lock for the duration of this scope.
+            let guard = ENV_LOCK.lock().unwrap();
+            EnvScope {
+                _guard: guard,
+                changes: vec![],
+            }
         }
 
         /// Sets an environment variable for the duration of this scope.
