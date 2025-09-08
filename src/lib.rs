@@ -1,4 +1,19 @@
 //! Detects ambient OIDC credentials in a variety of environments.
+//!
+//! # Supported Environments
+//!
+//! * GitHub Actions (with `id-token: write`)
+//! * GitLab CI
+//!
+//! # Usage
+//!
+//! ```rust,no_run
+//! let audience = "my-service";
+//! match ambient_id::detect(audience).await? {
+//!     Some(token) => println!("Detected ID token: {}", token.reveal()),
+//!     None => println!("No ambient ID token detected"),
+//! }
+//! ```
 
 #![deny(rustdoc::broken_intra_doc_links)]
 #![deny(missing_docs)]
@@ -10,10 +25,18 @@ mod github;
 mod gitlab;
 
 /// A detected ID token.
+///
+/// This is a newtype around a [`SecretString`] that ensures zero-on-drop
+/// semantics for the token.
+///
+/// The only way to get the token's value is via [`reveal`](IdToken::reveal).
 pub struct IdToken(SecretString);
 
 impl IdToken {
     /// Reveals the detected ID token.
+    ///
+    /// This returns a reference to the inner token, which is a secret
+    /// and must be handled with care.
     pub fn reveal(&self) -> &str {
         self.0.expose_secret()
     }
