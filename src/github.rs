@@ -42,16 +42,17 @@ impl Detector for GitHubActions {
     }
 
     /// On GitHub Actions, the OIDC token URL is provided
-    /// via the GITHUB_ID_TOKEN_REQUEST_URL environment variable.
-    /// We additionally need to fetch the GITHUB_ID_TOKEN_REQUEST_TOKEN
+    /// via the ACTIONS_ID_TOKEN_REQUEST_URL environment variable.
+    /// We additionally need to fetch the ACTIONS_ID_TOKEN_REQUEST_TOKEN
     /// environment variable to authenticate the request.
     ///
     /// The absence of either variable indicates insufficient permissions.
     async fn detect(&self, audience: &str) -> Result<crate::IdToken, Self::Error> {
-        let url = std::env::var("GITHUB_ID_TOKEN_REQUEST_URL")
-            .map_err(|_| Error::InsufficientPermissions("missing GITHUB_ID_TOKEN_REQUEST_URL"))?;
-        let token = std::env::var("GITHUB_ID_TOKEN_REQUEST_TOKEN")
-            .map_err(|_| Error::InsufficientPermissions("missing GITHUB_ID_TOKEN_REQUEST_TOKEN"))?;
+        let url = std::env::var("ACTIONS_ID_TOKEN_REQUEST_URL")
+            .map_err(|_| Error::InsufficientPermissions("missing ACTIONS_ID_TOKEN_REQUEST_URL"))?;
+        let token = std::env::var("ACTIONS_ID_TOKEN_REQUEST_TOKEN").map_err(|_| {
+            Error::InsufficientPermissions("missing ACTIONS_ID_TOKEN_REQUEST_TOKEN")
+        })?;
 
         let client = reqwest::Client::new();
         let resp = client
