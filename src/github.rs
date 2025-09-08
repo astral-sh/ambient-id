@@ -140,10 +140,12 @@ mod tests {
 
     #[test]
     fn test_not_detected_wrong_value() {
-        let mut scope = EnvScope::new();
-        scope.setenv("GITHUB_ACTIONS", "false");
+        for value in &["", "false", "TRUE", "1", "yes"] {
+            let mut scope = EnvScope::new();
+            scope.setenv("GITHUB_ACTIONS", value);
 
-        assert!(GitHubActions::new().is_none());
+            assert!(GitHubActions::new().is_none());
+        }
     }
 
     #[tokio::test]
@@ -192,5 +194,30 @@ mod tests {
             detector.detect("bupkis").await,
             Err(super::Error::Request(_))
         ));
+    }
+
+    #[tokio::test]
+    async fn test_ok() {
+        let server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/"))
+            .respond_with(
+                wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                    "value": "the-token"
+                })),
+            )
+            .mount(&server)
+            .await;
+
+        let mut scope = EnvScope::new();
+        scope.setenv("GITHUB_ACTIONS", "true");
+        scope.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "bogus");
+        scope.setenv("ACTIONS_ID_TOKEN_REQUEST_URL", &server.uri());
+
+        let detector = GitHubActions::new().expect("should detect GitHub Actions");
+        let token = detector.detect("bupkis").await.expect("should fetch token");
+
+        assert_eq!(token.reveal(), "the-token");
     }
 }
