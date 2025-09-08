@@ -39,11 +39,26 @@ cargo test
 
 ## License
 
+ambient-id is licensed under either of
 
+* Apache License, Version 2.0, ([LICENSE-APACHE] or https://www.apache.org/licenses/LICENSE-2.0)
+* MIT license ([LICENSE-MIT] or https://opensource.org/licenses/MIT)
+
+at your option.
+
+Unless you explicitly state otherwise, any contribution intentionally
+submitted for inclusion in ambient-id by you, as defined in the Apache-2.0
+license, shall be dually licensed as above, without any additional terms or
+conditions.
+
+<div align="center">
+  <a target="_blank" href="https://astral.sh" style="background:none">
+    <img src="https://raw.githubusercontent.com/astral-sh/uv/main/assets/svg/Astral.svg" alt="Made by Astral">
+  </a>
+</div>
 
 [id]: https://pypi.org/project/id/
-
 [GitHub documentation]: https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect
-
 [GitLab documentation]: https://docs.gitlab.com/ci/secrets/id_token_authentication/
-
+[LICENSE-APACHE]: ./LICENSE-APACHE
+[LICENSE-MIT]: ./LICENSE-MIT

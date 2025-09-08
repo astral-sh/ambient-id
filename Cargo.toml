@@ -3,6 +3,7 @@ name = "ambient-id"
 version = "0.1.0"
 edition = "2024"
 description = "Detects ambient OIDC credentials in a variety of environments"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 reqwest = { version = "0.12", default-features = false, features = [
