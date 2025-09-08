@@ -71,6 +71,11 @@ impl Detector for GitHubActions {
 
 #[cfg(test)]
 mod tests {
+    use wiremock::{
+        Mock, MockServer,
+        matchers::{method, path},
+    };
+
     use crate::{Detector as _, tests::EnvScope};
 
     use super::GitHubActions;
@@ -78,7 +83,7 @@ mod tests {
     /// Happy path for GitHub Actions OIDC token detection.
     #[tokio::test]
     #[cfg_attr(not(feature = "test-github-1p"), ignore)]
-    async fn test_1p_github_actions_detection_ok() {
+    async fn test_1p_detection_ok() {
         let detector = GitHubActions::new().expect("should detect GitHub Actions");
         detector.detect("bupkis").await.expect("should fetch token");
     }
@@ -87,7 +92,7 @@ mod tests {
     // is unset.
     #[tokio::test]
     #[cfg_attr(not(feature = "test-github-1p"), ignore)]
-    async fn test_1p_github_actions_detection_missing_url() {
+    async fn test_1p_detection_missing_url() {
         let mut scope = EnvScope::new();
         scope.unsetenv("ACTIONS_ID_TOKEN_REQUEST_URL");
 
@@ -105,7 +110,7 @@ mod tests {
     /// is unset.
     #[tokio::test]
     #[cfg_attr(not(feature = "test-github-1p"), ignore)]
-    async fn test_1p_github_actions_detection_missing_token() {
+    async fn test_1p_detection_missing_token() {
         let mut scope = EnvScope::new();
         scope.unsetenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN");
 
@@ -120,10 +125,48 @@ mod tests {
     }
 
     #[test]
-    fn test_github_actions_not_detected() {
+    fn test_not_detected() {
         let mut scope = EnvScope::new();
         scope.unsetenv("GITHUB_ACTIONS");
 
         assert!(GitHubActions::new().is_none());
+    }
+
+    #[test]
+    fn test_detected() {
+        let mut scope = EnvScope::new();
+        scope.setenv("GITHUB_ACTIONS", "true");
+
+        assert!(GitHubActions::new().is_some());
+    }
+
+    #[test]
+    fn test_not_detected_wrong_value() {
+        let mut scope = EnvScope::new();
+        scope.setenv("GITHUB_ACTIONS", "false");
+
+        assert!(GitHubActions::new().is_none());
+    }
+
+    #[tokio::test]
+    async fn test_invalid_response() {
+        let server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/"))
+            .respond_with(wiremock::ResponseTemplate::new(200).set_body_string("not json"))
+            .mount(&server)
+            .await;
+
+        let mut scope = EnvScope::new();
+        scope.setenv("GITHUB_ACTIONS", "true");
+        scope.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "bogus");
+        scope.setenv("ACTIONS_ID_TOKEN_REQUEST_URL", &server.uri());
+
+        let detector = GitHubActions::new().expect("should detect GitHub Actions");
+        match detector.detect("bupkis").await {
+            Err(super::Error::InvalidResponse(_)) => {}
+            _ => panic!("expected invalid response error"),
+        }
     }
 }
