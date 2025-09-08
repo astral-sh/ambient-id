@@ -78,8 +78,9 @@ mod tests {
     #[cfg_attr(not(feature = "test-github-1p"), ignore)]
     async fn test_1p_github_actions_detection() {
         let detector = GitHubActions::new().expect("should detect GitHub Actions");
-        let token = detector.detect("sigstore").await;
-
-        assert!(token.is_ok());
+        detector
+            .detect("sigstore")
+            .await
+            .expect("should fetch token");
     }
 }
