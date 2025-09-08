@@ -29,8 +29,21 @@ following environments:
     For additional information on OpenID Connect and `<AUD>_ID_TOKEN`
     environment variables, see the [GitLab documentation].
 
+## Development
+
+To run tests:
+
+```sh
+cargo test
+```
+
+## License
+
+
+
 [id]: https://pypi.org/project/id/
 
 [GitHub documentation]: https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect
 
 [GitLab documentation]: https://docs.gitlab.com/ci/secrets/id_token_authentication/
+

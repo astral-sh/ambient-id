@@ -69,8 +69,6 @@ impl Detector for GitLabCI {
 
 #[cfg(test)]
 mod tests {
-    use serde::de;
-
     use crate::{Detector as _, gitlab::Error, tests::EnvScope};
 
     use super::GitLabCI;
