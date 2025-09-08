@@ -133,4 +133,18 @@ mod tests {
             }
         }
     }
+
+    #[tokio::test]
+    async fn test_no_detection() {
+        let mut scope = EnvScope::new();
+        scope.unsetenv("GITHUB_ACTIONS");
+        scope.unsetenv("GITLAB_CI");
+
+        assert!(
+            super::detect("bupkis")
+                .await
+                .expect("should not error")
+                .is_none()
+        );
+    }
 }
