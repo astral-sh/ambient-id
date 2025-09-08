@@ -70,18 +70,37 @@ impl Detector for GitHubActions {
 }
 
 #[cfg(test)]
+#[allow(unsafe_code)]
 mod tests {
     use crate::Detector as _;
 
     use super::GitHubActions;
 
+    /// Happy path for GitHub Actions OIDC token detection.
     #[tokio::test]
     #[cfg_attr(not(feature = "test-github-1p"), ignore)]
-    async fn test_1p_github_actions_detection() {
+    async fn test_1p_github_actions_detection_ok() {
         let detector = GitHubActions::new().expect("should detect GitHub Actions");
         detector
             .detect("sigstore")
             .await
             .expect("should fetch token");
+    }
+
+    // Sad path: we're in GitHub Actions, but `ACTIONS_ID_TOKEN_REQUEST_URL`
+    // is unset.
+    #[tokio::test]
+    #[cfg_attr(not(feature = "test-github-1p"), ignore)]
+    async fn test_1p_github_actions_detection_missing_url() {
+        unsafe { std::env::remove_var("ACTIONS_ID_TOKEN_REQUEST_URL") };
+
+        let detector = GitHubActions::new().expect("should detect GitHub Actions");
+
+        match detector.detect("sigstore").await {
+            Err(super::Error::InsufficientPermissions(what)) => {
+                assert_eq!(what, "missing ACTIONS_ID_TOKEN_REQUEST_URL")
+            }
+            other => panic!("expected insufficient permissions error, got {other:?}"),
+        }
     }
 }

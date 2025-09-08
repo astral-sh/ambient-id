@@ -2,7 +2,7 @@
 
 #![deny(rustdoc::broken_intra_doc_links)]
 #![deny(missing_docs)]
-#![forbid(unsafe_code)]
+#![deny(unsafe_code)]
 
 use secrecy::{ExposeSecret, SecretString};
 
