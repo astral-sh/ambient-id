@@ -15,6 +15,9 @@ following environments:
     at the job or workflow level. In general, users should set this at the
     job level to limit the scope of the permission.
 
+    For additional information on OpenID Connect in GitHub Actions, see the
+    [GitHub documentation].
+
 * GitLab CI
 
   - On GitLab, this crate looks for an `<AUD>_ID_TOKEN` environment variable,
@@ -23,9 +26,11 @@ following environments:
     audience is `sigstore`, the crate will look for a `SIGSTORE_ID_TOKEN`
     environment variable.
 
-    For additional information on `<AUD>_ID_TOKEN` environment variables,
-    see the [GitLab documentation].
+    For additional information on OpenID Connect and `<AUD>_ID_TOKEN`
+    environment variables, see the [GitLab documentation].
 
 [id]: https://pypi.org/project/id/
+
+[GitHub documentation]: https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect
 
 [GitLab documentation]: https://docs.gitlab.com/ci/secrets/id_token_authentication/
