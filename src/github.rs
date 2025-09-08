@@ -100,7 +100,7 @@ mod tests {
             Err(super::Error::InsufficientPermissions(what)) => {
                 assert_eq!(what, "missing ACTIONS_ID_TOKEN_REQUEST_URL")
             }
-            other => panic!("expected insufficient permissions error, got {other:?}"),
+            _ => panic!("expected insufficient permissions error"),
         }
     }
 }
