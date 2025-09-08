@@ -9,15 +9,11 @@ reqwest = { version = "0.12", default-features = false, features = [
     "json",
     "gzip",
     "deflate",
-    "zstd",
     "stream",
     "system-proxy",
     "rustls-tls",
     "rustls-tls-native-roots",
-    "socks",
-    "multipart",
     "http2",
-    "blocking",
 ] }
 secrecy = "0.10"
 serde = { version = "1.0", features = ["derive"] }
