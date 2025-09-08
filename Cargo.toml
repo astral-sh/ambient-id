@@ -9,8 +9,6 @@ reqwest = { version = "0.12", default-features = false, features = [
     "json",
     "gzip",
     "deflate",
-    "stream",
-    "system-proxy",
     "rustls-tls",
     "rustls-tls-native-roots",
     "http2",
