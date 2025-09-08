@@ -1,0 +1,37 @@
+name: Unit tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  # Only run first-party OIDC tests on events that don't come from forks,
+  # since forks can't access the workflow's OIDC identity.
+  test-1p:
+    name: First-party OIDC tests
+    if: (github.event_name != 'pull_request') || !github.event.pull_request.head.repo.fork
+    permissions:
+      # Needed to access the workflow's OIDC identity.
+      id-token: write
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Run tests
+        run: cargo test --features test-github-1p
+
+  test-3p:
+    name: Third-party OIDC tests
+    permissions: {}
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Run tests
+        run: cargo test
