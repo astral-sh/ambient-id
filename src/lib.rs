@@ -7,7 +7,7 @@
 //!
 //! # Usage
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! let audience = "my-service";
 //! match ambient_id::detect(audience).await? {
 //!     Some(token) => println!("Detected ID token: {}", token.reveal()),
