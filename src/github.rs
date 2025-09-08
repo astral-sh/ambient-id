@@ -70,9 +70,8 @@ impl Detector for GitHubActions {
 }
 
 #[cfg(test)]
-#[allow(unsafe_code)]
 mod tests {
-    use crate::Detector as _;
+    use crate::{Detector as _, tests::EnvScope};
 
     use super::GitHubActions;
 
@@ -89,7 +88,8 @@ mod tests {
     #[tokio::test]
     #[cfg_attr(not(feature = "test-github-1p"), ignore)]
     async fn test_1p_github_actions_detection_missing_url() {
-        unsafe { std::env::remove_var("ACTIONS_ID_TOKEN_REQUEST_URL") };
+        let mut scope = EnvScope::new();
+        scope.unsetenv("ACTIONS_ID_TOKEN_REQUEST_URL");
 
         let detector = GitHubActions::new().expect("should detect GitHub Actions");
 
@@ -106,7 +106,8 @@ mod tests {
     #[tokio::test]
     #[cfg_attr(not(feature = "test-github-1p"), ignore)]
     async fn test_1p_github_actions_detection_missing_token() {
-        unsafe { std::env::remove_var("ACTIONS_ID_TOKEN_REQUEST_TOKEN") };
+        let mut scope = EnvScope::new();
+        scope.unsetenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN");
 
         let detector = GitHubActions::new().expect("should detect GitHub Actions");
 

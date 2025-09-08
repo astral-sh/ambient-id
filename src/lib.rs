@@ -72,4 +72,53 @@ pub async fn detect(audience: &str) -> Result<Option<IdToken>, Error> {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    enum EnvChange {
+        Add(String, String),
+        Remove(String),
+    }
+
+    pub(crate) struct EnvScope {
+        changes: Vec<EnvChange>,
+    }
+
+    impl EnvScope {
+        pub fn new() -> Self {
+            EnvScope { changes: vec![] }
+        }
+
+        /// Sets an environment variable for the duration of this scope.
+        #[allow(unsafe_code)]
+        pub fn setenv(&mut self, key: &str, value: &str) {
+            match std::env::var(key) {
+                Ok(old) => self.changes.push(EnvChange::Add(key.to_string(), old)),
+                Err(_) => self.changes.push(EnvChange::Remove(key.to_string())),
+            }
+
+            unsafe { std::env::set_var(key, value) };
+        }
+
+        /// Removes an environment variable for the duration of this scope.
+        #[allow(unsafe_code)]
+        pub fn unsetenv(&mut self, key: &str) {
+            match std::env::var(key) {
+                Ok(old) => self.changes.push(EnvChange::Add(key.to_string(), old)),
+                Err(_) => {}
+            }
+
+            unsafe { std::env::remove_var(key) };
+        }
+    }
+
+    impl Drop for EnvScope {
+        #[allow(unsafe_code)]
+        fn drop(&mut self) {
+            for change in self.changes.drain(..).rev() {
+                match change {
+                    EnvChange::Add(key, value) => unsafe { std::env::set_var(key, value) },
+                    EnvChange::Remove(key) => unsafe { std::env::remove_var(key) },
+                }
+            }
+        }
+    }
+}
