@@ -6,6 +6,12 @@ on:
       - main
   pull_request:
 
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # Only run first-party OIDC tests on events that don't come from forks,
   # since forks can't access the workflow's OIDC identity.

@@ -69,6 +69,8 @@ impl Detector for GitLabCI {
 
 #[cfg(test)]
 mod tests {
+    use crate::{Detector as _, gitlab::Error, tests::EnvScope};
+
     use super::GitLabCI;
 
     #[test]
@@ -88,5 +90,55 @@ mod tests {
         for (input, expected) in cases {
             assert_eq!(GitLabCI::normalized_audience(input), expected);
         }
+    }
+
+    #[test]
+    fn test_detected() {
+        let mut scope = EnvScope::new();
+        scope.setenv("GITLAB_CI", "true");
+
+        assert!(GitLabCI::new().is_some())
+    }
+
+    #[test]
+    fn test_not_detected() {
+        let mut scope = EnvScope::new();
+        scope.unsetenv("GITLAB_CI");
+
+        assert!(GitLabCI::new().is_none());
+    }
+
+    #[test]
+    fn test_not_detected_wrong_value() {
+        for value in &["", "false", "TRUE", "1", "yes"] {
+            let mut scope = EnvScope::new();
+            scope.setenv("GITLAB_CI", value);
+
+            assert!(GitLabCI::new().is_none());
+        }
+    }
+
+    #[tokio::test]
+    async fn test_invalid_missing() {
+        let mut scope = EnvScope::new();
+        scope.setenv("GITLAB_CI", "true");
+        scope.setenv("WRONG_ID_TOKEN", "sometoken");
+
+        let detector = GitLabCI::new().expect("should detect GitLab CI");
+        match detector.detect("bupkis").await {
+            Err(Error::Missing(var)) => assert_eq!(var, "BUPKIS_ID_TOKEN"),
+            _ => panic!("expected missing variable error"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_ok() {
+        let mut scope = EnvScope::new();
+        scope.setenv("GITLAB_CI", "true");
+        scope.setenv("BUPKIS_ID_TOKEN", "sometoken");
+
+        let detector = GitLabCI::new().expect("should detect GitLab CI");
+        let token = detector.detect("bupkis").await.expect("should fetch token");
+        assert_eq!(token.reveal(), "sometoken");
     }
 }
