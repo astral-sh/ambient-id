@@ -6,7 +6,6 @@ pub enum Error {
     InsufficientPermissions(&'static str),
     /// The HTTP request to fetch the ID token failed.
     Request(#[from] reqwest::Error),
-    InvalidResponse(#[from] serde_json::Error),
 }
 
 impl std::fmt::Display for Error {
@@ -15,8 +14,7 @@ impl std::fmt::Display for Error {
             Error::InsufficientPermissions(what) => {
                 write!(f, "insufficient permissions: {what}")
             }
-            Error::Request(err) => write!(f, "HTTP request error: {err}"),
-            Error::InvalidResponse(err) => write!(f, "invalid response: {err}"),
+            Error::Request(err) => write!(f, "HTTP request failed: {err}"),
         }
     }
 }
@@ -149,12 +147,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_invalid_response() {
+    async fn test_error_code() {
         let server = MockServer::start().await;
 
         Mock::given(method("GET"))
             .and(path("/"))
-            .respond_with(wiremock::ResponseTemplate::new(200).set_body_string("not json"))
+            .respond_with(wiremock::ResponseTemplate::new(503))
             .mount(&server)
             .await;
 
@@ -164,9 +162,35 @@ mod tests {
         scope.setenv("ACTIONS_ID_TOKEN_REQUEST_URL", &server.uri());
 
         let detector = GitHubActions::new().expect("should detect GitHub Actions");
-        match detector.detect("bupkis").await {
-            Err(super::Error::InvalidResponse(_)) => {}
-            _ => panic!("expected invalid response error"),
-        }
+        assert!(matches!(
+            detector.detect("bupkis").await,
+            Err(super::Error::Request(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_invalid_response() {
+        let server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/"))
+            .respond_with(
+                wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                    "bogus": "response"
+                })),
+            )
+            .mount(&server)
+            .await;
+
+        let mut scope = EnvScope::new();
+        scope.setenv("GITHUB_ACTIONS", "true");
+        scope.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "bogus");
+        scope.setenv("ACTIONS_ID_TOKEN_REQUEST_URL", &server.uri());
+
+        let detector = GitHubActions::new().expect("should detect GitHub Actions");
+        assert!(matches!(
+            detector.detect("bupkis").await,
+            Err(super::Error::Request(_))
+        ));
     }
 }
