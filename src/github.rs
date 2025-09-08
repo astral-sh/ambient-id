@@ -81,10 +81,7 @@ mod tests {
     #[cfg_attr(not(feature = "test-github-1p"), ignore)]
     async fn test_1p_github_actions_detection_ok() {
         let detector = GitHubActions::new().expect("should detect GitHub Actions");
-        detector
-            .detect("sigstore")
-            .await
-            .expect("should fetch token");
+        detector.detect("bupkis").await.expect("should fetch token");
     }
 
     // Sad path: we're in GitHub Actions, but `ACTIONS_ID_TOKEN_REQUEST_URL`
@@ -96,7 +93,7 @@ mod tests {
 
         let detector = GitHubActions::new().expect("should detect GitHub Actions");
 
-        match detector.detect("sigstore").await {
+        match detector.detect("bupkis").await {
             Err(super::Error::InsufficientPermissions(what)) => {
                 assert_eq!(what, "missing ACTIONS_ID_TOKEN_REQUEST_URL")
             }
@@ -113,7 +110,7 @@ mod tests {
 
         let detector = GitHubActions::new().expect("should detect GitHub Actions");
 
-        match detector.detect("sigstore").await {
+        match detector.detect("bupkis").await {
             Err(super::Error::InsufficientPermissions(what)) => {
                 assert_eq!(what, "missing ACTIONS_ID_TOKEN_REQUEST_TOKEN")
             }
