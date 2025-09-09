@@ -28,7 +28,7 @@ dependencies = [
 
 [[package]]
 name = "ambient-id"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "reqwest",
  "reqwest-middleware",
