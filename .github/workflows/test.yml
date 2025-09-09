@@ -12,6 +12,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Our tests are not thread-safe due to environment variable manipulation.
+  RUST_TEST_THREADS: 1
+
 jobs:
   # Only run first-party OIDC tests on events that don't come from forks,
   # since forks can't access the workflow's OIDC identity.
