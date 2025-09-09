@@ -165,18 +165,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_error_code() {
+        let mut scope = EnvScope::new();
         let server = MockServer::start().await;
+
+        scope.setenv("GITHUB_ACTIONS", "true");
+        scope.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "bogus");
+        scope.setenv("ACTIONS_ID_TOKEN_REQUEST_URL", &server.uri());
 
         Mock::given(method("GET"))
             .and(path("/"))
             .respond_with(wiremock::ResponseTemplate::new(503))
             .mount(&server)
             .await;
-
-        let mut scope = EnvScope::new();
-        scope.setenv("GITHUB_ACTIONS", "true");
-        scope.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "bogus");
-        scope.setenv("ACTIONS_ID_TOKEN_REQUEST_URL", &server.uri());
 
         let state = Default::default();
         let detector = GitHubActions::new(&state).expect("should detect GitHub Actions");
@@ -188,7 +188,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_invalid_response() {
+        let mut scope = EnvScope::new();
         let server = MockServer::start().await;
+
+        scope.setenv("GITHUB_ACTIONS", "true");
+        scope.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "bogus");
+        scope.setenv("ACTIONS_ID_TOKEN_REQUEST_URL", &server.uri());
 
         Mock::given(method("GET"))
             .and(path("/"))
@@ -200,11 +205,6 @@ mod tests {
             .mount(&server)
             .await;
 
-        let mut scope = EnvScope::new();
-        scope.setenv("GITHUB_ACTIONS", "true");
-        scope.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "bogus");
-        scope.setenv("ACTIONS_ID_TOKEN_REQUEST_URL", &server.uri());
-
         let state = Default::default();
         let detector = GitHubActions::new(&state).expect("should detect GitHub Actions");
         assert!(matches!(
@@ -215,7 +215,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_ok() {
+        let mut scope = EnvScope::new();
         let server = MockServer::start().await;
+
+        scope.setenv("GITHUB_ACTIONS", "true");
+        scope.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "bogus");
+        scope.setenv("ACTIONS_ID_TOKEN_REQUEST_URL", &server.uri());
 
         Mock::given(method("GET"))
             .and(path("/"))
@@ -226,11 +231,6 @@ mod tests {
             )
             .mount(&server)
             .await;
-
-        let mut scope = EnvScope::new();
-        scope.setenv("GITHUB_ACTIONS", "true");
-        scope.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "bogus");
-        scope.setenv("ACTIONS_ID_TOKEN_REQUEST_URL", &server.uri());
 
         let state = Default::default();
         let detector = GitHubActions::new(&state).expect("should detect GitHub Actions");
