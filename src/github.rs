@@ -94,7 +94,10 @@ mod tests {
         let _ = EnvScope::new();
         let state = Default::default();
         let detector = GitHubActions::new(&state).expect("should detect GitHub Actions");
-        detector.detect("bupkis").await.expect("should fetch token");
+        detector
+            .detect("test_1p_detection_ok")
+            .await
+            .expect("should fetch token");
     }
 
     // Sad path: we're in GitHub Actions, but `ACTIONS_ID_TOKEN_REQUEST_URL`
@@ -108,7 +111,7 @@ mod tests {
         let state = Default::default();
         let detector = GitHubActions::new(&state).expect("should detect GitHub Actions");
 
-        match detector.detect("bupkis").await {
+        match detector.detect("test_1p_detection_missing_url").await {
             Err(super::Error::InsufficientPermissions(what)) => {
                 assert_eq!(what, "missing ACTIONS_ID_TOKEN_REQUEST_URL")
             }
@@ -127,7 +130,7 @@ mod tests {
         let state = Default::default();
         let detector = GitHubActions::new(&state).expect("should detect GitHub Actions");
 
-        match detector.detect("bupkis").await {
+        match detector.detect("test_1p_detection_missing_token").await {
             Err(super::Error::InsufficientPermissions(what)) => {
                 assert_eq!(what, "missing ACTIONS_ID_TOKEN_REQUEST_TOKEN")
             }
@@ -182,7 +185,7 @@ mod tests {
         let state = Default::default();
         let detector = GitHubActions::new(&state).expect("should detect GitHub Actions");
         assert!(matches!(
-            detector.detect("bupkis").await,
+            detector.detect("test_error_code").await,
             Err(super::Error::Request(_))
         ));
     }
@@ -209,7 +212,7 @@ mod tests {
         let state = Default::default();
         let detector = GitHubActions::new(&state).expect("should detect GitHub Actions");
         assert!(matches!(
-            detector.detect("bupkis").await,
+            detector.detect("test_invalid_response").await,
             Err(super::Error::Request(_))
         ));
     }
@@ -227,7 +230,7 @@ mod tests {
             .and(path("/"))
             .respond_with(
                 wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({
-                    "value": "the-token"
+                    "value": "test-ok-token"
                 })),
             )
             .mount(&server)
@@ -235,8 +238,11 @@ mod tests {
 
         let state = Default::default();
         let detector = GitHubActions::new(&state).expect("should detect GitHub Actions");
-        let token = detector.detect("bupkis").await.expect("should fetch token");
+        let token = detector
+            .detect("test_ok")
+            .await
+            .expect("should fetch token");
 
-        assert_eq!(token.reveal(), "the-token");
+        assert_eq!(token.reveal(), "test-ok-token");
     }
 }
