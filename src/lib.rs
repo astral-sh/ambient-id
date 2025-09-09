@@ -134,8 +134,7 @@ mod tests {
     /// This effectively overrides Rust's default test parallelism,
     /// but without the user needing to explicitly pass `--test-threads=1`
     /// or `RUST_TEST_THREADS=1`.
-    static ENV_LOCK: LazyLock<tokio::sync::Mutex<()>> =
-        LazyLock::new(|| tokio::sync::Mutex::new(()));
+    static ENV_LOCK: LazyLock<std::sync::Mutex<()>> = LazyLock::new(|| std::sync::Mutex::new(()));
 
     /// An environment variable delta.
     enum EnvDelta {
@@ -150,14 +149,16 @@ mod tests {
     /// This maintains a stack of changes to unwind on drop; changes
     /// are unwound the reverse order of application
     pub(crate) struct EnvScope {
-        _guard: tokio::sync::MutexGuard<'static, ()>,
+        _guard: std::sync::MutexGuard<'static, ()>,
         changes: Vec<EnvDelta>,
     }
 
     impl EnvScope {
-        pub async fn new() -> Self {
+        pub fn new() -> Self {
             // Hold the global environment lock for the duration of this scope.
-            let guard = ENV_LOCK.lock().await;
+            // NOTE: This unwrap will panic if another test thread panics,
+            // e.g. due to an unexpected test failure.
+            let guard = ENV_LOCK.lock().unwrap();
             EnvScope {
                 _guard: guard,
                 changes: vec![],
@@ -206,7 +207,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_no_detection() {
-        let mut scope = EnvScope::new().await;
+        let mut scope = EnvScope::new();
         scope.unsetenv("GITHUB_ACTIONS");
         scope.unsetenv("GITLAB_CI");
 

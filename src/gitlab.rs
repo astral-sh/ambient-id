@@ -94,7 +94,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_detected() {
-        let mut scope = EnvScope::new().await;
+        let mut scope = EnvScope::new();
         scope.setenv("GITLAB_CI", "true");
 
         assert!(GitLabCI::new(&Default::default()).is_some())
@@ -102,7 +102,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_not_detected() {
-        let mut scope = EnvScope::new().await;
+        let mut scope = EnvScope::new();
         scope.unsetenv("GITLAB_CI");
 
         assert!(GitLabCI::new(&Default::default()).is_none());
@@ -111,7 +111,7 @@ mod tests {
     #[tokio::test]
     async fn test_not_detected_wrong_value() {
         for value in &["", "false", "TRUE", "1", "yes"] {
-            let mut scope = EnvScope::new().await;
+            let mut scope = EnvScope::new();
             scope.setenv("GITLAB_CI", value);
 
             assert!(GitLabCI::new(&Default::default()).is_none());
@@ -120,7 +120,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_invalid_missing() {
-        let mut scope = EnvScope::new().await;
+        let mut scope = EnvScope::new();
         scope.setenv("GITLAB_CI", "true");
         scope.setenv("WRONG_ID_TOKEN", "sometoken");
 
@@ -133,7 +133,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ok() {
-        let mut scope = EnvScope::new().await;
+        let mut scope = EnvScope::new();
         scope.setenv("GITLAB_CI", "true");
         scope.setenv("BUPKIS_ID_TOKEN", "sometoken");
 

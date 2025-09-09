@@ -101,7 +101,7 @@ mod tests {
     #[tokio::test]
     #[cfg_attr(not(feature = "test-github-1p"), ignore)]
     async fn test_1p_detection_missing_url() {
-        let mut scope = EnvScope::new().await;
+        let mut scope = EnvScope::new();
         scope.unsetenv("ACTIONS_ID_TOKEN_REQUEST_URL");
 
         let state = Default::default();
@@ -120,7 +120,7 @@ mod tests {
     #[tokio::test]
     #[cfg_attr(not(feature = "test-github-1p"), ignore)]
     async fn test_1p_detection_missing_token() {
-        let mut scope = EnvScope::new().await;
+        let mut scope = EnvScope::new();
         scope.unsetenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN");
 
         let state = Default::default();
@@ -136,7 +136,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_not_detected() {
-        let mut scope = EnvScope::new().await;
+        let mut scope = EnvScope::new();
         scope.unsetenv("GITHUB_ACTIONS");
 
         let state = Default::default();
@@ -145,7 +145,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_detected() {
-        let mut scope = EnvScope::new().await;
+        let mut scope = EnvScope::new();
         scope.setenv("GITHUB_ACTIONS", "true");
 
         let state = Default::default();
@@ -155,7 +155,7 @@ mod tests {
     #[tokio::test]
     async fn test_not_detected_wrong_value() {
         for value in &["", "false", "TRUE", "1", "yes"] {
-            let mut scope = EnvScope::new().await;
+            let mut scope = EnvScope::new();
             scope.setenv("GITHUB_ACTIONS", value);
 
             let state = Default::default();
@@ -173,7 +173,7 @@ mod tests {
             .mount(&server)
             .await;
 
-        let mut scope = EnvScope::new().await;
+        let mut scope = EnvScope::new();
         scope.setenv("GITHUB_ACTIONS", "true");
         scope.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "bogus");
         scope.setenv("ACTIONS_ID_TOKEN_REQUEST_URL", &server.uri());
@@ -200,7 +200,7 @@ mod tests {
             .mount(&server)
             .await;
 
-        let mut scope = EnvScope::new().await;
+        let mut scope = EnvScope::new();
         scope.setenv("GITHUB_ACTIONS", "true");
         scope.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "bogus");
         scope.setenv("ACTIONS_ID_TOKEN_REQUEST_URL", &server.uri());
@@ -227,7 +227,7 @@ mod tests {
             .mount(&server)
             .await;
 
-        let mut scope = EnvScope::new().await;
+        let mut scope = EnvScope::new();
         scope.setenv("GITHUB_ACTIONS", "true");
         scope.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "bogus");
         scope.setenv("ACTIONS_ID_TOKEN_REQUEST_URL", &server.uri());
