@@ -38,7 +38,7 @@ impl GitLabCI {
     }
 }
 
-impl DetectionStrategy<'_> for GitLabCI {
+impl DetectionStrategy for GitLabCI {
     type Error = Error;
 
     fn new(_state: &DetectionState) -> Option<Self> {

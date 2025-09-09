@@ -30,21 +30,21 @@ struct TokenRequestResponse {
     value: String,
 }
 
-pub(crate) struct GitHubActions<'a> {
-    client: &'a ClientWithMiddleware,
+pub(crate) struct GitHubActions {
+    client: ClientWithMiddleware,
 }
 
-impl<'a> DetectionStrategy<'a> for GitHubActions<'a> {
+impl DetectionStrategy for GitHubActions {
     type Error = Error;
 
-    fn new(state: &'a DetectionState) -> Option<Self> {
+    fn new(state: &DetectionState) -> Option<Self> {
         std::env::var("GITHUB_ACTIONS")
             .ok()
             // Per GitHub docs, this is exactly "true" when
             // running in GitHub Actions.
             .filter(|v| v == "true")
             .map(|_| GitHubActions {
-                client: &state.client,
+                client: state.client.clone(),
             })
     }
 

@@ -61,10 +61,10 @@ struct DetectionState {
 }
 
 /// A trait for detecting ambient OIDC credentials.
-trait DetectionStrategy<'a> {
+trait DetectionStrategy {
     type Error;
 
-    fn new(state: &'a DetectionState) -> Option<Self>
+    fn new(state: &DetectionState) -> Option<Self>
     where
         Self: Sized;
 
@@ -85,9 +85,11 @@ impl Detector {
     }
 
     /// Creates a new detector with the given HTTP client middleware stack.
-    pub fn new_with_middleware(client: ClientWithMiddleware) -> Self {
+    pub fn new_with_client(client: impl Into<ClientWithMiddleware>) -> Self {
         Detector {
-            state: DetectionState { client },
+            state: DetectionState {
+                client: client.into(),
+            },
         }
     }
 
