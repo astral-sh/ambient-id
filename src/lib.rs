@@ -48,10 +48,10 @@ impl IdToken {
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// An error occurred while detecting GitHub Actions credentials.
-    #[error("GitHub Actions detection error: {0}")]
+    #[error("GitHub Actions detection error")]
     GitHubActions(#[from] github::Error),
     /// An error occurred while detecting GitLab CI credentials.
-    #[error("GitLab CI detection error: {0}")]
+    #[error("GitLab CI detection error")]
     GitLabCI(#[from] gitlab::Error),
 }
 
