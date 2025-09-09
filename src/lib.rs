@@ -126,8 +126,6 @@ impl Detector {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::LazyLock;
-
     use crate::Detector;
 
     /// A global lock to ensure only one test is manipulating
@@ -136,7 +134,7 @@ mod tests {
     /// This effectively overrides Rust's default test parallelism,
     /// but without the user needing to explicitly pass `--test-threads=1`
     /// or `RUST_TEST_THREADS=1`.
-    static ENV_LOCK: LazyLock<std::sync::Mutex<()>> = LazyLock::new(|| std::sync::Mutex::new(()));
+    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     /// An environment variable delta.
     enum EnvDelta {
