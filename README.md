@@ -36,8 +36,12 @@ following environments:
 To run tests:
 
 ```sh
-cargo test
+RUST_TEST_THREADS=1 cargo test
 ```
+
+You **must** pass `RUST_TEST_THREADS=1` to ensure tests are run in a single
+thread, as this crate's tests manipulate environment variables and are not
+thread-safe.
 
 ## License
 
