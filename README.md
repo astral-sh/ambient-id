@@ -1,5 +1,7 @@
 # ambient-id
 
+[![Crates.io Version](https://img.shields.io/crates/v/ambient-id)](https://crates.io/crates/ambient-id)
+
 A library for accessing ambient OIDC credentials in a variety of environments.
 
 This crate serves the same purpose as Python's [id] library.
