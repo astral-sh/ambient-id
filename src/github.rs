@@ -91,6 +91,7 @@ mod tests {
     #[tokio::test]
     #[cfg_attr(not(feature = "test-github-1p"), ignore)]
     async fn test_1p_detection_ok() {
+        let _ = EnvScope::new();
         let state = Default::default();
         let detector = GitHubActions::new(&state).expect("should detect GitHub Actions");
         detector.detect("bupkis").await.expect("should fetch token");
