@@ -1,4 +1,4 @@
-use crate::Detector;
+use crate::{DetectionState, DetectionStrategy};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -38,10 +38,10 @@ impl GitLabCI {
     }
 }
 
-impl Detector for GitLabCI {
+impl DetectionStrategy<'_> for GitLabCI {
     type Error = Error;
 
-    fn new() -> Option<Self> {
+    fn new(_state: &DetectionState) -> Option<Self> {
         std::env::var("GITLAB_CI")
             .ok()
             // Per GitLab docs, this is exactly "true" when
@@ -69,7 +69,7 @@ impl Detector for GitLabCI {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Detector as _, gitlab::Error, tests::EnvScope};
+    use crate::{DetectionStrategy as _, gitlab::Error, tests::EnvScope};
 
     use super::GitLabCI;
 
@@ -92,39 +92,39 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_detected() {
-        let mut scope = EnvScope::new();
+    #[tokio::test]
+    async fn test_detected() {
+        let mut scope = EnvScope::new().await;
         scope.setenv("GITLAB_CI", "true");
 
-        assert!(GitLabCI::new().is_some())
+        assert!(GitLabCI::new(&Default::default()).is_some())
     }
 
-    #[test]
-    fn test_not_detected() {
-        let mut scope = EnvScope::new();
+    #[tokio::test]
+    async fn test_not_detected() {
+        let mut scope = EnvScope::new().await;
         scope.unsetenv("GITLAB_CI");
 
-        assert!(GitLabCI::new().is_none());
+        assert!(GitLabCI::new(&Default::default()).is_none());
     }
 
-    #[test]
-    fn test_not_detected_wrong_value() {
+    #[tokio::test]
+    async fn test_not_detected_wrong_value() {
         for value in &["", "false", "TRUE", "1", "yes"] {
-            let mut scope = EnvScope::new();
+            let mut scope = EnvScope::new().await;
             scope.setenv("GITLAB_CI", value);
 
-            assert!(GitLabCI::new().is_none());
+            assert!(GitLabCI::new(&Default::default()).is_none());
         }
     }
 
     #[tokio::test]
     async fn test_invalid_missing() {
-        let mut scope = EnvScope::new();
+        let mut scope = EnvScope::new().await;
         scope.setenv("GITLAB_CI", "true");
         scope.setenv("WRONG_ID_TOKEN", "sometoken");
 
-        let detector = GitLabCI::new().expect("should detect GitLab CI");
+        let detector = GitLabCI::new(&Default::default()).expect("should detect GitLab CI");
         assert!(matches!(
             detector.detect("bupkis").await,
             Err(Error::Missing(_))
@@ -133,11 +133,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_ok() {
-        let mut scope = EnvScope::new();
+        let mut scope = EnvScope::new().await;
         scope.setenv("GITLAB_CI", "true");
         scope.setenv("BUPKIS_ID_TOKEN", "sometoken");
 
-        let detector = GitLabCI::new().expect("should detect GitLab CI");
+        let detector = GitLabCI::new(&Default::default()).expect("should detect GitLab CI");
         let token = detector.detect("bupkis").await.expect("should fetch token");
         assert_eq!(token.reveal(), "sometoken");
     }

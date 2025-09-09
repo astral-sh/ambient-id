@@ -1,10 +1,14 @@
-use crate::Detector;
+use reqwest_middleware::ClientWithMiddleware;
+
+use crate::{DetectionState, DetectionStrategy};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// The GitHub Actions environment lacks necessary permissions.
     InsufficientPermissions(&'static str),
-    /// The HTTP request to fetch the ID token failed.
+    /// The HTTP request to fetch the ID token failed (in middleware).
+    Middleware(#[from] reqwest_middleware::Error),
+    /// The HTTP request to fetch the ID token failed (in reqwest).
     Request(#[from] reqwest::Error),
 }
 
@@ -14,6 +18,7 @@ impl std::fmt::Display for Error {
             Error::InsufficientPermissions(what) => {
                 write!(f, "insufficient permissions: {what}")
             }
+            Error::Middleware(err) => write!(f, "HTTP request failed: {err}"),
             Error::Request(err) => write!(f, "HTTP request failed: {err}"),
         }
     }
@@ -25,18 +30,22 @@ struct TokenRequestResponse {
     value: String,
 }
 
-pub(crate) struct GitHubActions;
+pub(crate) struct GitHubActions<'a> {
+    client: &'a ClientWithMiddleware,
+}
 
-impl Detector for GitHubActions {
+impl<'a> DetectionStrategy<'a> for GitHubActions<'a> {
     type Error = Error;
 
-    fn new() -> Option<Self> {
+    fn new(state: &'a DetectionState) -> Option<Self> {
         std::env::var("GITHUB_ACTIONS")
             .ok()
             // Per GitHub docs, this is exactly "true" when
             // running in GitHub Actions.
             .filter(|v| v == "true")
-            .map(|_| GitHubActions)
+            .map(|_| GitHubActions {
+                client: &state.client,
+            })
     }
 
     /// On GitHub Actions, the OIDC token URL is provided
@@ -52,8 +61,8 @@ impl Detector for GitHubActions {
             Error::InsufficientPermissions("missing ACTIONS_ID_TOKEN_REQUEST_TOKEN")
         })?;
 
-        let client = reqwest::Client::new();
-        let resp = client
+        let resp = self
+            .client
             .get(&url)
             .bearer_auth(token)
             .query(&[("audience", audience)])
@@ -74,7 +83,7 @@ mod tests {
         matchers::{method, path},
     };
 
-    use crate::{Detector as _, tests::EnvScope};
+    use crate::{DetectionStrategy as _, tests::EnvScope};
 
     use super::GitHubActions;
 
@@ -82,7 +91,8 @@ mod tests {
     #[tokio::test]
     #[cfg_attr(not(feature = "test-github-1p"), ignore)]
     async fn test_1p_detection_ok() {
-        let detector = GitHubActions::new().expect("should detect GitHub Actions");
+        let state = Default::default();
+        let detector = GitHubActions::new(&state).expect("should detect GitHub Actions");
         detector.detect("bupkis").await.expect("should fetch token");
     }
 
@@ -91,10 +101,11 @@ mod tests {
     #[tokio::test]
     #[cfg_attr(not(feature = "test-github-1p"), ignore)]
     async fn test_1p_detection_missing_url() {
-        let mut scope = EnvScope::new();
+        let mut scope = EnvScope::new().await;
         scope.unsetenv("ACTIONS_ID_TOKEN_REQUEST_URL");
 
-        let detector = GitHubActions::new().expect("should detect GitHub Actions");
+        let state = Default::default();
+        let detector = GitHubActions::new(&state).expect("should detect GitHub Actions");
 
         match detector.detect("bupkis").await {
             Err(super::Error::InsufficientPermissions(what)) => {
@@ -109,10 +120,11 @@ mod tests {
     #[tokio::test]
     #[cfg_attr(not(feature = "test-github-1p"), ignore)]
     async fn test_1p_detection_missing_token() {
-        let mut scope = EnvScope::new();
+        let mut scope = EnvScope::new().await;
         scope.unsetenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN");
 
-        let detector = GitHubActions::new().expect("should detect GitHub Actions");
+        let state = Default::default();
+        let detector = GitHubActions::new(&state).expect("should detect GitHub Actions");
 
         match detector.detect("bupkis").await {
             Err(super::Error::InsufficientPermissions(what)) => {
@@ -122,29 +134,32 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_not_detected() {
-        let mut scope = EnvScope::new();
+    #[tokio::test]
+    async fn test_not_detected() {
+        let mut scope = EnvScope::new().await;
         scope.unsetenv("GITHUB_ACTIONS");
 
-        assert!(GitHubActions::new().is_none());
+        let state = Default::default();
+        assert!(GitHubActions::new(&state).is_none());
     }
 
-    #[test]
-    fn test_detected() {
-        let mut scope = EnvScope::new();
+    #[tokio::test]
+    async fn test_detected() {
+        let mut scope = EnvScope::new().await;
         scope.setenv("GITHUB_ACTIONS", "true");
 
-        assert!(GitHubActions::new().is_some());
+        let state = Default::default();
+        assert!(GitHubActions::new(&state).is_some());
     }
 
-    #[test]
-    fn test_not_detected_wrong_value() {
+    #[tokio::test]
+    async fn test_not_detected_wrong_value() {
         for value in &["", "false", "TRUE", "1", "yes"] {
-            let mut scope = EnvScope::new();
+            let mut scope = EnvScope::new().await;
             scope.setenv("GITHUB_ACTIONS", value);
 
-            assert!(GitHubActions::new().is_none());
+            let state = Default::default();
+            assert!(GitHubActions::new(&state).is_none());
         }
     }
 
@@ -158,12 +173,13 @@ mod tests {
             .mount(&server)
             .await;
 
-        let mut scope = EnvScope::new();
+        let mut scope = EnvScope::new().await;
         scope.setenv("GITHUB_ACTIONS", "true");
         scope.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "bogus");
         scope.setenv("ACTIONS_ID_TOKEN_REQUEST_URL", &server.uri());
 
-        let detector = GitHubActions::new().expect("should detect GitHub Actions");
+        let state = Default::default();
+        let detector = GitHubActions::new(&state).expect("should detect GitHub Actions");
         assert!(matches!(
             detector.detect("bupkis").await,
             Err(super::Error::Request(_))
@@ -184,12 +200,13 @@ mod tests {
             .mount(&server)
             .await;
 
-        let mut scope = EnvScope::new();
+        let mut scope = EnvScope::new().await;
         scope.setenv("GITHUB_ACTIONS", "true");
         scope.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "bogus");
         scope.setenv("ACTIONS_ID_TOKEN_REQUEST_URL", &server.uri());
 
-        let detector = GitHubActions::new().expect("should detect GitHub Actions");
+        let state = Default::default();
+        let detector = GitHubActions::new(&state).expect("should detect GitHub Actions");
         assert!(matches!(
             detector.detect("bupkis").await,
             Err(super::Error::Request(_))
@@ -210,12 +227,13 @@ mod tests {
             .mount(&server)
             .await;
 
-        let mut scope = EnvScope::new();
+        let mut scope = EnvScope::new().await;
         scope.setenv("GITHUB_ACTIONS", "true");
         scope.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "bogus");
         scope.setenv("ACTIONS_ID_TOKEN_REQUEST_URL", &server.uri());
 
-        let detector = GitHubActions::new().expect("should detect GitHub Actions");
+        let state = Default::default();
+        let detector = GitHubActions::new(&state).expect("should detect GitHub Actions");
         let token = detector.detect("bupkis").await.expect("should fetch token");
 
         assert_eq!(token.reveal(), "the-token");

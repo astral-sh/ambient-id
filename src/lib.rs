@@ -9,7 +9,8 @@
 //!
 //! ```rust,ignore
 //! let audience = "my-service";
-//! match ambient_id::detect(audience).await? {
+//! let detector = ambient_id::Detector::new();
+//! match detector.detect(audience).await? {
 //!     Some(token) => println!("Detected ID token: {}", token.reveal()),
 //!     None => println!("No ambient ID token detected"),
 //! }
@@ -19,6 +20,7 @@
 #![deny(missing_docs)]
 #![deny(unsafe_code)]
 
+use reqwest_middleware::ClientWithMiddleware;
 use secrecy::{ExposeSecret, SecretString};
 
 mod github;
@@ -53,37 +55,62 @@ pub enum Error {
     GitLabCI(#[from] gitlab::Error),
 }
 
+#[derive(Default)]
+struct DetectionState {
+    client: ClientWithMiddleware,
+}
+
 /// A trait for detecting ambient OIDC credentials.
-trait Detector {
+trait DetectionStrategy<'a> {
     type Error;
 
-    fn new() -> Option<Self>
+    fn new(state: &'a DetectionState) -> Option<Self>
     where
         Self: Sized;
 
     async fn detect(&self, audience: &str) -> Result<IdToken, Self::Error>;
 }
 
-/// Detects ambient OIDC credentials in the current environment.
-///
-/// The given `audience` controls the `aud` claim in the returned ID token.
-///
-/// This function runs a series of detection strategies and returns
-/// the first successful one. If no credentials are found,
-/// it returns `Ok(None)`.
-///
-/// If any (hard) errors occur during detection, it returns `Err`.
-pub async fn detect(audience: &str) -> Result<Option<IdToken>, Error> {
-    macro_rules! detect {
+/// Detector for ambient OIDC credentials.
+pub struct Detector {
+    state: DetectionState,
+}
+
+impl Detector {
+    /// Creates a new detector with default settings.
+    pub fn new() -> Self {
+        Detector {
+            state: Default::default(),
+        }
+    }
+
+    /// Creates a new detector with the given HTTP client middleware stack.
+    pub fn new_with_middleware(client: ClientWithMiddleware) -> Self {
+        Detector {
+            state: DetectionState { client },
+        }
+    }
+
+    /// Detects ambient OIDC credentials in the current environment.
+    ///
+    /// The given `audience` controls the `aud` claim in the returned ID token.
+    ///
+    /// This function runs a series of detection strategies and returns
+    /// the first successful one. If no credentials are found,
+    /// it returns `Ok(None)`.
+    ///
+    /// If any (hard) errors occur during detection, it returns `Err`.
+    pub async fn detect(&self, audience: &str) -> Result<Option<IdToken>, Error> {
+        macro_rules! detect {
         ($detector:path) => {
-            if let Some(detector) = <$detector>::new() {
+            if let Some(detector) = <$detector>::new(&self.state) {
                 detector.detect(audience).await.map_err(Into::into).map(Some)
             } else {
                 Ok(None)
             }
         };
         ($detector:path, $($rest:path),+) => {
-            if let Some(detector) = <$detector>::new() {
+            if let Some(detector) = <$detector>::new(&self.state) {
                 detector.detect(audience).await.map_err(Into::into).map(Some)
             } else {
                 detect!($($rest),+)
@@ -91,12 +118,15 @@ pub async fn detect(audience: &str) -> Result<Option<IdToken>, Error> {
         };
     }
 
-    detect!(github::GitHubActions, gitlab::GitLabCI)
+        detect!(github::GitHubActions, gitlab::GitLabCI)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use std::sync::LazyLock;
+
+    use crate::Detector;
 
     /// A global lock to ensure only one test is manipulating
     /// environment variables at a time.
@@ -104,7 +134,8 @@ mod tests {
     /// This effectively overrides Rust's default test parallelism,
     /// but without the user needing to explicitly pass `--test-threads=1`
     /// or `RUST_TEST_THREADS=1`.
-    static ENV_LOCK: LazyLock<std::sync::Mutex<()>> = LazyLock::new(|| std::sync::Mutex::new(()));
+    static ENV_LOCK: LazyLock<tokio::sync::Mutex<()>> =
+        LazyLock::new(|| tokio::sync::Mutex::new(()));
 
     /// An environment variable delta.
     enum EnvDelta {
@@ -119,14 +150,14 @@ mod tests {
     /// This maintains a stack of changes to unwind on drop; changes
     /// are unwound the reverse order of application
     pub(crate) struct EnvScope {
-        _guard: std::sync::MutexGuard<'static, ()>,
+        _guard: tokio::sync::MutexGuard<'static, ()>,
         changes: Vec<EnvDelta>,
     }
 
     impl EnvScope {
-        pub fn new() -> Self {
+        pub async fn new() -> Self {
             // Hold the global environment lock for the duration of this scope.
-            let guard = ENV_LOCK.lock().unwrap();
+            let guard = ENV_LOCK.lock().await;
             EnvScope {
                 _guard: guard,
                 changes: vec![],
@@ -175,12 +206,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_no_detection() {
-        let mut scope = EnvScope::new();
+        let mut scope = EnvScope::new().await;
         scope.unsetenv("GITHUB_ACTIONS");
         scope.unsetenv("GITLAB_CI");
 
+        let detector = Detector::new();
+
         assert!(
-            super::detect("bupkis")
+            detector
+                .detect("bupkis")
                 .await
                 .expect("should not error")
                 .is_none()

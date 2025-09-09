@@ -19,6 +19,7 @@ reqwest = { version = "0.12", default-features = false, features = [
     "rustls-tls-native-roots",
     "http2",
 ] }
+reqwest-middleware = "0.4.2"
 secrecy = "0.10"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
