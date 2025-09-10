@@ -1,27 +1,21 @@
+//! GitHub Actions OIDC token detection.
+
 use reqwest_middleware::ClientWithMiddleware;
 
 use crate::{DetectionState, DetectionStrategy};
 
+/// Possible errors during GitHub Actions OIDC token detection.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// The GitHub Actions environment lacks necessary permissions.
+    ///
+    /// This is typically resolved by adding `id-token: write` to the
+    /// job's `permissions` block.
+    #[error("insufficient permissions: {0}")]
     InsufficientPermissions(&'static str),
-    /// The HTTP request to fetch the ID token failed (in middleware).
-    Middleware(#[from] reqwest_middleware::Error),
-    /// The HTTP request to fetch the ID token failed (in reqwest).
-    Request(#[from] reqwest::Error),
-}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::InsufficientPermissions(what) => {
-                write!(f, "insufficient permissions: {what}")
-            }
-            Error::Middleware(err) => write!(f, "HTTP request failed: {err}"),
-            Error::Request(err) => write!(f, "HTTP request failed: {err}"),
-        }
-    }
+    /// The HTTP request to fetch the ID token failed.
+    #[error("HTTP request failed: {0}")]
+    Request(#[from] reqwest_middleware::Error),
 }
 
 /// The JSON payload returned by GitHub's ID token endpoint.
@@ -68,9 +62,11 @@ impl DetectionStrategy for GitHubActions {
             .query(&[("audience", audience)])
             .send()
             .await?
-            .error_for_status()?
+            .error_for_status()
+            .map_err(reqwest_middleware::Error::Reqwest)?
             .json::<TokenRequestResponse>()
-            .await?;
+            .await
+            .map_err(reqwest_middleware::Error::Reqwest)?;
 
         Ok(crate::IdToken(resp.value.into()))
     }

@@ -26,6 +26,9 @@ use secrecy::{ExposeSecret, SecretString};
 mod github;
 mod gitlab;
 
+pub use github::Error as GitHubError;
+pub use gitlab::Error as GitLabError;
+
 /// A detected ID token.
 ///
 /// This is a newtype around a [`SecretString`] that ensures zero-on-drop
@@ -49,10 +52,10 @@ impl IdToken {
 pub enum Error {
     /// An error occurred while detecting GitHub Actions credentials.
     #[error("GitHub Actions detection error")]
-    GitHubActions(#[from] github::Error),
+    GitHubActions(#[from] GitHubError),
     /// An error occurred while detecting GitLab CI credentials.
     #[error("GitLab CI detection error")]
-    GitLabCI(#[from] gitlab::Error),
+    GitLabCI(#[from] GitLabError),
 }
 
 #[derive(Default)]
