@@ -1,16 +1,13 @@
+//! GitLab CI OIDC token detection.
+
 use crate::{DetectionState, DetectionStrategy};
 
+/// Possible errors during GitLab CI OIDC token detection.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    /// The expected environment variable for the ID token was not found.
+    #[error("ID token variable not found: {0}")]
     Missing(String),
-}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::Missing(what) => write!(f, "ID token variable not found: {what}"),
-        }
-    }
 }
 
 pub(crate) struct GitLabCI;
