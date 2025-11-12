@@ -1,18 +1,16 @@
 //! Google Cloud Platform OIDC token detection.
 
 use reqwest_middleware::ClientWithMiddleware;
-use serde::ser;
+use serde_json::json;
 use thiserror::Error;
 
-use crate::DetectionStrategy;
+use crate::{DetectionStrategy, IdToken};
 
 const GCP_PRODUCT_NAME_FILE: &str = "/sys/class/dmi/id/product_name";
 const GCP_TOKEN_REQUEST_URL: &str =
     "http://metadata/computeMetadata/v1/instance/service-accounts/default/token";
 const GCP_IDENTITY_REQUEST_URL: &str =
     "http://metadata/computeMetadata/v1/instance/service-accounts/default/identity";
-const GCP_GENERATEIDTOKEN_REQUEST_URL_TEMPLATE: &str =
-    "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{}:generateIdToken";
 
 const GCP_PRODUCT_NAMES: &[&str] = &["Google", "Google Compute Engine"];
 
@@ -20,8 +18,12 @@ const GCP_PRODUCT_NAMES: &[&str] = &["Google", "Google Compute Engine"];
 pub enum Error {
     #[error("invalid GOOGLE_SERVICE_ACCOUNT_NAME value: {0:?}")]
     ServiceAccountNameInvalid(std::ffi::OsString),
-    #[error("failed to request access token")]
+    #[error("impersonation flow: failed to request access token")]
     AccessTokenRequest(#[source] reqwest_middleware::Error),
+    #[error("impersonation flow: failed to exchange access token for ID token")]
+    ExchangeIdTokenRequest(#[source] reqwest_middleware::Error),
+    #[error("direct flow: failed to request ID token")]
+    IdTokenRequest(#[source] reqwest_middleware::Error),
 }
 
 enum GcpSubstrategy {
@@ -41,6 +43,11 @@ pub(crate) struct Gcp {
 #[derive(serde::Deserialize)]
 struct AccessTokenResponse {
     access_token: String,
+}
+
+#[derive(serde::Deserialize)]
+struct GenerateIdTokenResponse {
+    token: String,
 }
 
 impl DetectionStrategy for Gcp {
@@ -100,9 +107,46 @@ impl DetectionStrategy for Gcp {
                     "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{service_account_name}:generateIdToken"
                 );
 
-                todo!()
+                let resp = self
+                    .client
+                    .post(id_token_request_url)
+                    .bearer_auth(resp.access_token)
+                    .body(
+                        serde_json::to_string(&json!({
+                            "audience": audience,
+                            "includeEmail": true,
+                        }))
+                        .expect("impossible: JSON serialization failed"),
+                    )
+                    .send()
+                    .await
+                    .map_err(|e| Error::ExchangeIdTokenRequest(e.into()))?
+                    .error_for_status()
+                    .map_err(|e| Error::ExchangeIdTokenRequest(e.into()))?
+                    .json::<GenerateIdTokenResponse>()
+                    .await
+                    .map_err(|e| Error::ExchangeIdTokenRequest(e.into()))?;
+
+                Ok(IdToken(resp.token.into()))
             }
-            GcpSubstrategy::Direct => todo!(),
+            GcpSubstrategy::Direct => {
+                // Request an ID token directly from the metadata server.
+                let resp = self
+                    .client
+                    .get(GCP_IDENTITY_REQUEST_URL)
+                    .header("Metadata-Flavor", "Google")
+                    .query(&[("audience", audience)])
+                    .send()
+                    .await
+                    .map_err(|e| Error::IdTokenRequest(e.into()))?
+                    .error_for_status()
+                    .map_err(|e| Error::IdTokenRequest(e.into()))?
+                    .text()
+                    .await
+                    .map_err(|e| Error::IdTokenRequest(e.into()))?;
+
+                Ok(IdToken(resp.into()))
+            }
         }
     }
 }
