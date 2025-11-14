@@ -28,8 +28,9 @@ dependencies = [
 
 [[package]]
 name = "ambient-id"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
+ "astral-reqwest-middleware",
  "reqwest",
  "reqwest-middleware",
  "secrecy",
@@ -54,6 +55,21 @@ checksum = "47e4f2b81832e72834d7518d8487a0396a28cc408186a2e8854c0f98011faf12"
 dependencies = [
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "astral-reqwest-middleware"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "638d02e24aeb92f9537897cd1ff82e2bc98fd9ac9575a503e27bb07cdf64d4d7"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "http",
+ "reqwest",
+ "serde",
+ "thiserror 2.0.16",
+ "tower-service",
 ]
 
 [[package]]
