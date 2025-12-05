@@ -90,9 +90,11 @@ mod tests {
         let _ = EnvScope::new();
         let state = Default::default();
         let detector = BuildKite::new(&state).expect("should detect BuildKite");
-        detector
+        let token = detector
             .detect("test_1p_detection_ok")
             .await
             .expect("should fetch token");
+
+        assert!(token.reveal().starts_with("eyJ"));
     }
 }

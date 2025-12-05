@@ -90,10 +90,12 @@ mod tests {
         let _ = EnvScope::new();
         let state = Default::default();
         let detector = GitHubActions::new(&state).expect("should detect GitHub Actions");
-        detector
+        let token = detector
             .detect("test_1p_detection_ok")
             .await
             .expect("should fetch token");
+
+        assert!(token.reveal().starts_with("eyJ")); // JWTs start with "eyJ"
     }
 
     // Sad path: we're in GitHub Actions, but `ACTIONS_ID_TOKEN_REQUEST_URL`
