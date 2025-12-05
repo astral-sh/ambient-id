@@ -86,7 +86,7 @@ mod tests {
     /// Happy path for BuildKite OIDC token detection.
     #[tokio::test]
     #[cfg_attr(not(feature = "test-buildkite-1p"), ignore)]
-    async fn test_detection_ok() {
+    async fn test_1p_detection_ok() {
         let _ = EnvScope::new();
         let state = Default::default();
         let detector = BuildKite::new(&state).expect("should detect BuildKite");
