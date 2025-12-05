@@ -3,7 +3,7 @@ steps:
     key: test
     command: "cargo test --features test-buildkite-1p"
     env:
-      RUST_TEST_THREADS: 1
+      RUST_TEST_THREADS: "1"
     plugins:
       - docker:
           image: "rust"
