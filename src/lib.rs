@@ -205,6 +205,7 @@ mod tests {
         let mut scope = EnvScope::new();
         scope.unsetenv("GITHUB_ACTIONS");
         scope.unsetenv("GITLAB_CI");
+        scope.unsetenv("BUILDKITE");
 
         let detector = Detector::new();
 
