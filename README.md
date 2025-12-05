@@ -31,6 +31,14 @@ following environments:
     For additional information on OpenID Connect and `<AUD>_ID_TOKEN`
     environment variables, see the [GitLab documentation].
 
+* BuildKite
+
+  - On BuildKite, this crate invokes
+    `buildkite-agent oidc request-token --audience <AUD>` to obtain the token.
+
+    For additional information on OpenID Connect in BuildKite, see the
+    [BuildKite documentation].
+
 ## Development
 
 To run tests:
@@ -66,5 +74,6 @@ conditions.
 [id]: https://pypi.org/project/id/
 [GitHub documentation]: https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect
 [GitLab documentation]: https://docs.gitlab.com/ci/secrets/id_token_authentication/
+[BuildKite documentation]: https://buildkite.com/docs/pipelines/security/oidc
 [LICENSE-APACHE]: ./LICENSE-APACHE
 [LICENSE-MIT]: ./LICENSE-MIT
