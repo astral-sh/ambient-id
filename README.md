@@ -36,6 +36,14 @@ following environments:
   - On BuildKite, this crate invokes
     `buildkite-agent oidc request-token --audience <AUD>` to obtain the token.
 
+    > [!TIP]
+    > If you're using BuildKite's [Docker plugin], you'll need to
+    > propagate the environment and mount the BuildKite agent binary into
+    > the container for this to work correctly.
+    >
+    > Specifically, you'll need `propagate-environment: true` and
+    > `mount-buildkite-agent: true` set in your plugin configuration.
+
     For additional information on OpenID Connect in BuildKite, see the
     [BuildKite documentation].
 
@@ -74,6 +82,7 @@ conditions.
 [id]: https://pypi.org/project/id/
 [GitHub documentation]: https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect
 [GitLab documentation]: https://docs.gitlab.com/ci/secrets/id_token_authentication/
+[Docker plugin]: https://github.com/buildkite-plugins/docker-buildkite-plugin
 [BuildKite documentation]: https://buildkite.com/docs/pipelines/security/oidc
 [LICENSE-APACHE]: ./LICENSE-APACHE
 [LICENSE-MIT]: ./LICENSE-MIT
