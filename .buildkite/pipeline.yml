@@ -6,3 +6,4 @@ steps:
       - docker:
           image: "rust"
           propagate-environment: true
+          mount-buildkite-agent: true
