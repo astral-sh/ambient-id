@@ -23,6 +23,7 @@
 use reqwest_middleware::ClientWithMiddleware;
 use secrecy::{ExposeSecret, SecretString};
 
+mod buildkite;
 mod github;
 mod gitlab;
 
@@ -56,6 +57,9 @@ pub enum Error {
     /// An error occurred while detecting GitLab CI credentials.
     #[error("GitLab CI detection error")]
     GitLabCI(#[from] GitLabError),
+    /// An error occurred while detecting BuildKite credentials.
+    #[error("BuildKite detection error")]
+    BuildKite(#[from] buildkite::Error),
 }
 
 #[derive(Default)]
@@ -123,7 +127,11 @@ impl Detector {
         };
     }
 
-        detect!(github::GitHubActions, gitlab::GitLabCI)
+        detect!(
+            github::GitHubActions,
+            gitlab::GitLabCI,
+            buildkite::BuildKite
+        )
     }
 }
 
