@@ -36,13 +36,12 @@ following environments:
   - On BuildKite, this crate invokes
     `buildkite-agent oidc request-token --audience <AUD>` to obtain the token.
 
-    > [!TIP]
-    > If you're using BuildKite's [Docker plugin], you'll need to
-    > propagate the environment and mount the BuildKite agent binary into
-    > the container for this to work correctly.
-    >
-    > Specifically, you'll need `propagate-environment: true` and
-    > `mount-buildkite-agent: true` set in your plugin configuration.
+    If you're using BuildKite's [Docker plugin], you'll need to
+    propagate the environment and mount the BuildKite agent binary into
+    the container for this to work correctly.
+
+    Specifically, you'll need `propagate-environment: true` and
+    `mount-buildkite-agent: true` set in your plugin configuration.
 
     For additional information on OpenID Connect in BuildKite, see the
     [BuildKite documentation].
