@@ -27,6 +27,7 @@ mod buildkite;
 mod github;
 mod gitlab;
 
+pub use buildkite::Error as BuildKiteError;
 pub use github::Error as GitHubError;
 pub use gitlab::Error as GitLabError;
 
