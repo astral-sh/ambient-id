@@ -4,6 +4,7 @@
 //!
 //! * GitHub Actions (with `id-token: write`)
 //! * GitLab CI
+//! * BuildKite
 //!
 //! # Usage
 //!
