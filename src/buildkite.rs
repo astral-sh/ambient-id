@@ -40,20 +40,13 @@ impl DetectionStrategy for BuildKite {
             .output()?;
 
         if !output.status.success() {
-            match output.status.code() {
-                Some(code) => {
-                    return Err(Error::Execution(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        format!("buildkite-agent exited with code {code}"),
-                    )));
-                }
-                None => {
-                    return Err(Error::Execution(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        "buildkite-agent terminated by signal",
-                    )));
-                }
-            }
+            return Err(Error::Execution(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!(
+                    "buildkite-agent exited with code {status}",
+                    status = output.status
+                ),
+            )));
         }
 
         let token = String::from_utf8_lossy(&output.stdout).trim().to_string();
