@@ -4,6 +4,7 @@
 //!
 //! * GitHub Actions (with `id-token: write`)
 //! * GitLab CI
+//! * BuildKite
 //!
 //! # Usage
 //!
@@ -23,9 +24,11 @@
 use reqwest_middleware::ClientWithMiddleware;
 use secrecy::{ExposeSecret, SecretString};
 
+mod buildkite;
 mod github;
 mod gitlab;
 
+pub use buildkite::Error as BuildKiteError;
 pub use github::Error as GitHubError;
 pub use gitlab::Error as GitLabError;
 
@@ -56,6 +59,9 @@ pub enum Error {
     /// An error occurred while detecting GitLab CI credentials.
     #[error("GitLab CI detection error")]
     GitLabCI(#[from] GitLabError),
+    /// An error occurred while detecting BuildKite credentials.
+    #[error("BuildKite detection error")]
+    BuildKite(#[from] buildkite::Error),
 }
 
 #[derive(Default)]
@@ -123,7 +129,11 @@ impl Detector {
         };
     }
 
-        detect!(github::GitHubActions, gitlab::GitLabCI)
+        detect!(
+            github::GitHubActions,
+            gitlab::GitLabCI,
+            buildkite::BuildKite
+        )
     }
 }
 
@@ -197,6 +207,7 @@ mod tests {
         let mut scope = EnvScope::new();
         scope.unsetenv("GITHUB_ACTIONS");
         scope.unsetenv("GITLAB_CI");
+        scope.unsetenv("BUILDKITE");
 
         let detector = Detector::new();
 

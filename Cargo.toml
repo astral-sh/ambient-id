@@ -35,6 +35,10 @@ default = ["reqwest-middleware"]
 # with `permissions: id-token: write`).
 test-github-1p = []
 
+# This is a test-only feature to allow CI to run tests that require
+# a functional BuildKite OIDC environment.
+test-buildkite-1p = []
+
 [dev-dependencies]
 tokio = { version = "1", features = ["rt", "macros"] }
 wiremock = "0.6"
