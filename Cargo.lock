@@ -28,7 +28,7 @@ dependencies = [
 
 [[package]]
 name = "ambient-id"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "astral-reqwest-middleware",
  "reqwest",

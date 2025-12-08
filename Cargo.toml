@@ -1,6 +1,6 @@
 [package]
 name = "ambient-id"
-version = "0.0.6"
+version = "0.0.7"
 authors = ["William Woodruff <william@astral.sh>"]
 edition = "2024"
 description = "Detects ambient OIDC credentials in a variety of environments"
