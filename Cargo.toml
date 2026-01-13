@@ -11,15 +11,17 @@ categories = ["security", "authentication", "asynchronous"]
 keywords = ["oidc", "trusted-publishing", "sigstore", "identity"]
 
 [dependencies]
-reqwest = { version = "0.12", default-features = false, features = [
+reqwest = { version = "0.13.1", default-features = false, features = [
   "json",
   "gzip",
   "deflate",
   "http2",
+  "query",
 ] }
-reqwest-middleware = { version = "0.4.2", optional = true }
+
+reqwest-middleware = { version = "0.5.0", optional = true, features = ["query"] }
 # Workaround for https://github.com/rust-lang/cargo/issues/9227#issuecomment-3532957795
-astral-reqwest-middleware = { version = "0.4.2", optional = true }
+astral-reqwest-middleware = { version = "0.5.0", optional = true, package = "astral-reqwest-middleware", features = ["query"] }
 secrecy = "0.10"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
