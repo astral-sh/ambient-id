@@ -6,7 +6,7 @@ use crate::DetectionStrategy;
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// An error occurred while executing the `buildkite-agent` command.
-    #[error("failed to obtain OIDC token from buildkite-agent")]
+    #[error("failed to obtain OIDC token from `buildkite-agent` CLI")]
     Execution(#[from] std::io::Error),
 }
 
@@ -43,7 +43,7 @@ impl DetectionStrategy for Buildkite {
             return Err(Error::Execution(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 format!(
-                    "buildkite-agent exited with code {status}",
+                    "`buildkite-agent` exited with code {status}",
                     status = output.status
                 ),
             )));
