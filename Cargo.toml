@@ -36,7 +36,7 @@ default = ["reqwest-middleware"]
 test-github-1p = []
 
 # This is a test-only feature to allow CI to run tests that require
-# a functional BuildKite OIDC environment.
+# a functional Buildkite OIDC environment.
 test-buildkite-1p = []
 
 [dev-dependencies]

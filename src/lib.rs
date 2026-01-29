@@ -4,7 +4,7 @@
 //!
 //! * GitHub Actions (with `id-token: write`)
 //! * GitLab CI
-//! * BuildKite
+//! * Buildkite
 //!
 //! # Usage
 //!
@@ -28,7 +28,7 @@ mod buildkite;
 mod github;
 mod gitlab;
 
-pub use buildkite::Error as BuildKiteError;
+pub use buildkite::Error as BuildkiteError;
 pub use github::Error as GitHubError;
 pub use gitlab::Error as GitLabError;
 
@@ -59,9 +59,9 @@ pub enum Error {
     /// An error occurred while detecting GitLab CI credentials.
     #[error("GitLab CI detection error")]
     GitLabCI(#[from] GitLabError),
-    /// An error occurred while detecting BuildKite credentials.
-    #[error("BuildKite detection error")]
-    BuildKite(#[from] buildkite::Error),
+    /// An error occurred while detecting Buildkite credentials.
+    #[error("Buildkite detection error")]
+    Buildkite(#[from] buildkite::Error),
 }
 
 #[derive(Default)]
@@ -132,7 +132,7 @@ impl Detector {
         detect!(
             github::GitHubActions,
             gitlab::GitLabCI,
-            buildkite::BuildKite
+            buildkite::Buildkite
         )
     }
 }
