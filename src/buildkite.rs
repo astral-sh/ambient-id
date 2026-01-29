@@ -1,8 +1,8 @@
-//! BuildKite OIDC token detection.
+//! Buildkite OIDC token detection.
 
 use crate::DetectionStrategy;
 
-/// Possible errors during BuildKite OIDC token detection.
+/// Possible errors during Buildkite OIDC token detection.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// An error occurred while executing the `buildkite-agent` command.
@@ -10,9 +10,9 @@ pub enum Error {
     Execution(#[from] std::io::Error),
 }
 
-pub(crate) struct BuildKite;
+pub(crate) struct Buildkite;
 
-impl DetectionStrategy for BuildKite {
+impl DetectionStrategy for Buildkite {
     type Error = Error;
 
     fn new(_state: &crate::DetectionState) -> Option<Self>
@@ -23,10 +23,10 @@ impl DetectionStrategy for BuildKite {
         std::env::var("BUILDKITE")
             .ok()
             .filter(|v| v == "true")
-            .map(|_| BuildKite)
+            .map(|_| Buildkite)
     }
 
-    /// On BuildKite, the OIDC token is provided by the `buildkite-agent`
+    /// On Buildkite, the OIDC token is provided by the `buildkite-agent`
     /// tool. Specifically, we need to invoke:
     ///
     /// ```sh
@@ -56,7 +56,7 @@ impl DetectionStrategy for BuildKite {
 
 #[cfg(test)]
 mod tests {
-    use crate::{DetectionStrategy as _, buildkite::BuildKite, tests::EnvScope};
+    use crate::{DetectionStrategy as _, buildkite::Buildkite, tests::EnvScope};
 
     #[tokio::test]
     async fn test_not_detected() {
@@ -64,7 +64,7 @@ mod tests {
         scope.unsetenv("BUILDKITE");
 
         let state = Default::default();
-        assert!(BuildKite::new(&state).is_none());
+        assert!(Buildkite::new(&state).is_none());
     }
 
     #[tokio::test]
@@ -73,16 +73,16 @@ mod tests {
         scope.setenv("BUILDKITE", "true");
 
         let state = Default::default();
-        assert!(BuildKite::new(&state).is_some());
+        assert!(Buildkite::new(&state).is_some());
     }
 
-    /// Happy path for BuildKite OIDC token detection.
+    /// Happy path for Buildkite OIDC token detection.
     #[tokio::test]
     #[cfg_attr(not(feature = "test-buildkite-1p"), ignore)]
     async fn test_1p_detection_ok() {
         let _ = EnvScope::new();
         let state = Default::default();
-        let detector = BuildKite::new(&state).expect("should detect BuildKite");
+        let detector = Buildkite::new(&state).expect("should detect Buildkite");
         let token = detector
             .detect("test_1p_detection_ok")
             .await
