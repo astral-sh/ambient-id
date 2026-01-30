@@ -87,4 +87,19 @@ mod tests {
         let state = Default::default();
         assert!(CircleCI::new(&state).is_some());
     }
+
+    /// Happy path for CircleCI OIDC token detection.
+    #[tokio::test]
+    #[cfg_attr(not(feature = "test-circleci-1p"), ignore)]
+    async fn test_1p_detection_ok() {
+        let _ = EnvScope::new();
+        let state = Default::default();
+        let detector = CircleCI::new(&state).expect("should detect CircleCI");
+        let token = detector
+            .detect("test_1p_detection_ok")
+            .await
+            .expect("should fetch token");
+
+        assert!(token.reveal().starts_with("eyJ"));
+    }
 }
