@@ -213,6 +213,7 @@ mod tests {
         scope.unsetenv("GITHUB_ACTIONS");
         scope.unsetenv("GITLAB_CI");
         scope.unsetenv("BUILDKITE");
+        scope.unsetenv("CIRCLECI");
 
         let detector = Detector::new();
 
