@@ -5,7 +5,7 @@ version: 2.1
 jobs:
   test:
     docker:
-      - image: cimg/rust
+      - image: cimg/rust:1.93
     steps:
       - checkout
       - run: cargo test -- --test-threads=1
