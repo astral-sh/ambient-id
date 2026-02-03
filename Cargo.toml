@@ -12,12 +12,10 @@ keywords = ["oidc", "trusted-publishing", "sigstore", "identity"]
 
 [dependencies]
 reqwest = { version = "0.12", default-features = false, features = [
-    "json",
-    "gzip",
-    "deflate",
-    "rustls-tls",
-    "rustls-tls-native-roots",
-    "http2",
+  "json",
+  "gzip",
+  "deflate",
+  "http2",
 ] }
 reqwest-middleware = { version = "0.4.2", optional = true }
 # Workaround for https://github.com/rust-lang/cargo/issues/9227#issuecomment-3532957795
@@ -28,7 +26,9 @@ serde_json = "1.0"
 thiserror = "2.0"
 
 [features]
-default = ["reqwest-middleware"]
+default = ["dep:reqwest-middleware", "rustls"]
+rustls = ["reqwest/rustls-tls", "reqwest/rustls-tls-native-roots"]
+native-tls = ["reqwest/native-tls"]
 
 # This is a test-only feature to allow CI to run tests that require
 # a functional GitHub Actions OIDC environment (i.e. one provisioned
