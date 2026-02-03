@@ -55,8 +55,9 @@ impl DetectionStrategy for CircleCI {
             return Err(Error::Execution(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 format!(
-                    "`circleci` exited with code {status}",
-                    status = output.status
+                    "`circleci` exited with code {status}: '{stderr}'",
+                    status = output.status,
+                    stderr = String::from_utf8_lossy(&output.stderr),
                 ),
             )));
         }

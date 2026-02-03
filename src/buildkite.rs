@@ -43,8 +43,9 @@ impl DetectionStrategy for Buildkite {
             return Err(Error::Execution(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 format!(
-                    "`buildkite-agent` exited with code {status}",
-                    status = output.status
+                    "`buildkite-agent` exited with code {status}: '{stderr}'",
+                    status = output.status,
+                    stderr = String::from_utf8_lossy(&output.stderr),
                 ),
             )));
         }
