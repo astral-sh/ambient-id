@@ -27,7 +27,7 @@ thiserror = "2.0"
 
 [features]
 default = ["reqwest-middleware", "rustls"]
-rustls = ["reqwest/rustls-tls", "reqwest/rustls-tls-native-roots"]
+rustls = ["reqwest/rustls"]
 native-tls = ["reqwest/native-tls"]
 
 # This is a test-only feature to allow CI to run tests that require
