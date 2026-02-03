@@ -39,6 +39,10 @@ test-github-1p = []
 # a functional Buildkite OIDC environment.
 test-buildkite-1p = []
 
+# This is a test-only feature to allow CI to run tests that require
+# a functional CircleCI OIDC environment.
+test-circleci-1p = []
+
 [dev-dependencies]
 tokio = { version = "1", features = ["rt", "macros"] }
 wiremock = "0.6"

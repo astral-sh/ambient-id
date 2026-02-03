@@ -25,6 +25,7 @@ use reqwest_middleware::ClientWithMiddleware;
 use secrecy::{ExposeSecret, SecretString};
 
 mod buildkite;
+mod circleci;
 mod github;
 mod gitlab;
 
@@ -62,6 +63,9 @@ pub enum Error {
     /// An error occurred while detecting Buildkite credentials.
     #[error("Buildkite detection error")]
     Buildkite(#[from] buildkite::Error),
+    /// An error occurred while detecting CircleCI credentials.
+    #[error("CircleCI detection error")]
+    CircleCI(#[from] circleci::Error),
 }
 
 #[derive(Default)]
@@ -132,7 +136,8 @@ impl Detector {
         detect!(
             github::GitHubActions,
             gitlab::GitLabCI,
-            buildkite::Buildkite
+            buildkite::Buildkite,
+            circleci::CircleCI
         )
     }
 }
@@ -208,6 +213,7 @@ mod tests {
         scope.unsetenv("GITHUB_ACTIONS");
         scope.unsetenv("GITLAB_CI");
         scope.unsetenv("BUILDKITE");
+        scope.unsetenv("CIRCLECI");
 
         let detector = Detector::new();
 

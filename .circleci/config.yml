@@ -9,7 +9,7 @@ jobs:
     resource_class: medium
     steps:
       - checkout
-      - run: cargo test -- --test-threads=1
+      - run: cargo test --features test-circleci-1p -- --test-threads=1
 
 # Orchestrate jobs using workflows
 # See: https://circleci.com/docs/guides/orchestrate/workflows/ & https://circleci.com/docs/reference/configuration-reference/#workflows

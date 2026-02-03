@@ -1,49 +1,61 @@
-//! Buildkite OIDC token detection.
+//! CircleCI OIDC token detection.
+
+use serde_json::json;
 
 use crate::DetectionStrategy;
 
-/// Possible errors during Buildkite OIDC token detection.
+/// Possible errors during BuildKite OIDC token detection.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    /// An error occurred while executing the `buildkite-agent` command.
-    #[error("failed to obtain OIDC token from `buildkite-agent` CLI")]
+    /// An error occurred while executing the `circleci` command.
+    #[error("failed to obtain OIDC token from `circleci` CLI")]
     Execution(#[from] std::io::Error),
 }
 
-pub(crate) struct Buildkite;
+pub(crate) struct CircleCI;
 
-impl DetectionStrategy for Buildkite {
+impl DetectionStrategy for CircleCI {
     type Error = Error;
 
     fn new(_state: &crate::DetectionState) -> Option<Self>
     where
         Self: Sized,
     {
-        // https://buildkite.com/docs/pipelines/configure/environment-variables#buildkite-environment-variables
-        std::env::var("BUILDKITE")
+        // https://circleci.com/docs/reference/variables/#built-in-environment-variables
+        std::env::var("CIRCLECI")
             .ok()
             .filter(|v| v == "true")
-            .map(|_| Buildkite)
+            .map(|_| CircleCI)
     }
 
-    /// On Buildkite, the OIDC token is provided by the `buildkite-agent`
-    /// tool. Specifically, we need to invoke:
+    /// On CircleCI, the OIDC token is provided by the `circleci` tool.
+    /// Specifically, we need to invoke:
     ///
     /// ```sh
-    /// buildkite-agent oidc request-token --audience <audience>
+    /// circleci run oidc get --root-issuer --claims '{"aud": <audience>}'
     /// ```
     ///
     /// The standard output of this command is the ID token on success.
     async fn detect(&self, audience: &str) -> Result<crate::IdToken, Self::Error> {
-        let output = std::process::Command::new("buildkite-agent")
-            .args(&["oidc", "request-token", "--audience", audience])
+        let output = std::process::Command::new("circleci")
+            .args(&[
+                "run",
+                "oidc",
+                "get",
+                "--root-issuer",
+                "--claims",
+                &json!({
+                    "aud": audience
+                })
+                .to_string(),
+            ])
             .output()?;
 
         if !output.status.success() {
             return Err(Error::Execution(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 format!(
-                    "`buildkite-agent` exited with code {status}: '{stderr}'",
+                    "`circleci` exited with code {status}: '{stderr}'",
                     status = output.status,
                     stderr = String::from_utf8_lossy(&output.stderr),
                 ),
@@ -57,33 +69,33 @@ impl DetectionStrategy for Buildkite {
 
 #[cfg(test)]
 mod tests {
-    use crate::{DetectionStrategy as _, buildkite::Buildkite, tests::EnvScope};
+    use crate::{DetectionStrategy as _, circleci::CircleCI, tests::EnvScope};
 
     #[tokio::test]
     async fn test_not_detected() {
         let mut scope = EnvScope::new();
-        scope.unsetenv("BUILDKITE");
+        scope.unsetenv("CIRCLECI");
 
         let state = Default::default();
-        assert!(Buildkite::new(&state).is_none());
+        assert!(CircleCI::new(&state).is_none());
     }
 
     #[tokio::test]
     async fn test_detected() {
         let mut scope = EnvScope::new();
-        scope.setenv("BUILDKITE", "true");
+        scope.setenv("CIRCLECI", "true");
 
         let state = Default::default();
-        assert!(Buildkite::new(&state).is_some());
+        assert!(CircleCI::new(&state).is_some());
     }
 
-    /// Happy path for Buildkite OIDC token detection.
+    /// Happy path for CircleCI OIDC token detection.
     #[tokio::test]
-    #[cfg_attr(not(feature = "test-buildkite-1p"), ignore)]
+    #[cfg_attr(not(feature = "test-circleci-1p"), ignore)]
     async fn test_1p_detection_ok() {
         let _ = EnvScope::new();
         let state = Default::default();
-        let detector = Buildkite::new(&state).expect("should detect Buildkite");
+        let detector = CircleCI::new(&state).expect("should detect CircleCI");
         let token = detector
             .detect("test_1p_detection_ok")
             .await

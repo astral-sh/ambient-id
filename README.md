@@ -45,6 +45,15 @@ following environments:
 
     For additional information on OpenID Connect in Buildkite, see the
     [Buildkite documentation].
+  
+* CircleCI
+
+  - On CircleCI, this crate invokes
+    `circleci run oidc get --root-issuer --claims '{"aud": <AUD>}'`
+    to obtain the token.
+  
+    This crate only uses `--root-issuer`; per-organization issuers aren't
+    supported. 
 
 ## Development
 
