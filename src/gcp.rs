@@ -152,3 +152,303 @@ impl DetectionStrategy for Gcp {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+    use wiremock::{
+        Mock, MockServer,
+        matchers::{header, method, path, query_param},
+    };
+
+    use crate::{DetectionStrategy as _, tests::EnvScope};
+
+    use super::Gcp;
+
+    const TEST_SERVICE_ACCOUNT: &str = "test@example.iam.gserviceaccount.com";
+
+    fn build_test_client(server: &MockServer) -> reqwest_middleware::ClientWithMiddleware {
+        reqwest_middleware::ClientBuilder::new(
+            reqwest::Client::builder()
+                .resolve(
+                    "metadata",
+                    std::net::SocketAddr::from(([127, 0, 0, 1], server.address().port())),
+                )
+                .build()
+                .unwrap(),
+        )
+        .build()
+    }
+
+    #[tokio::test]
+    async fn test_not_detected_no_env_no_file() {
+        let mut scope = EnvScope::new();
+        scope.unsetenv("GOOGLE_SERVICE_ACCOUNT_NAME");
+
+        let state = Default::default();
+        assert!(Gcp::new(&state).is_none());
+    }
+
+    #[tokio::test]
+    async fn test_detected_impersonation() {
+        let mut scope = EnvScope::new();
+        scope.setenv("GOOGLE_SERVICE_ACCOUNT_NAME", TEST_SERVICE_ACCOUNT);
+
+        let state = Default::default();
+        assert!(Gcp::new(&state).is_some());
+    }
+
+    #[tokio::test]
+    async fn test_direct_flow_ok() {
+        let server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path(
+                "/computeMetadata/v1/instance/service-accounts/default/identity",
+            ))
+            .and(header("Metadata-Flavor", "Google"))
+            .and(query_param("audience", "test_direct_flow_ok"))
+            .and(query_param("format", "full"))
+            .respond_with(wiremock::ResponseTemplate::new(200).set_body_string("test-direct-token"))
+            .mount(&server)
+            .await;
+
+        let detector = Gcp {
+            client: build_test_client(&server),
+            substrategy: super::GcpSubstrategy::Direct,
+        };
+
+        let token = detector.detect("test_direct_flow_ok").await.unwrap();
+        assert_eq!(token.reveal(), "test-direct-token");
+    }
+
+    #[tokio::test]
+    async fn test_direct_flow_error_code() {
+        let server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path(
+                "/computeMetadata/v1/instance/service-accounts/default/identity",
+            ))
+            .respond_with(wiremock::ResponseTemplate::new(503))
+            .mount(&server)
+            .await;
+
+        let detector = Gcp {
+            client: build_test_client(&server),
+            substrategy: super::GcpSubstrategy::Direct,
+        };
+
+        assert!(matches!(
+            detector.detect("test_direct_flow_error_code").await,
+            Err(super::Error::IdTokenRequest(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_impersonation_flow_ok() {
+        let metadata_server = MockServer::start().await;
+        let iam_server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path(
+                "/computeMetadata/v1/instance/service-accounts/default/token",
+            ))
+            .and(header("Metadata-Flavor", "Google"))
+            .and(query_param(
+                "scopes",
+                "https://www.googleapis.com/auth/cloud-platform",
+            ))
+            .respond_with(
+                wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                    "access_token": "test-access-token"
+                })),
+            )
+            .mount(&metadata_server)
+            .await;
+
+        Mock::given(method("POST"))
+            .and(path("/v1/projects/-/serviceAccounts/test@example.iam.gserviceaccount.com:generateIdToken"))
+            .and(header("Authorization", "Bearer test-access-token"))
+            .and(header("Content-Type", "application/json"))
+            .respond_with(
+                wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                    "token": "test-impersonation-token"
+                })),
+            )
+            .mount(&iam_server)
+            .await;
+
+        let client = build_test_client(&metadata_server);
+
+        let resp = client
+            .get(format!(
+                "{}/computeMetadata/v1/instance/service-accounts/default/token",
+                metadata_server.uri()
+            ))
+            .query(&[("scopes", "https://www.googleapis.com/auth/cloud-platform")])
+            .header("Metadata-Flavor", "Google")
+            .send()
+            .await
+            .unwrap()
+            .json::<super::AccessTokenResponse>()
+            .await
+            .unwrap();
+
+        let token_resp = client
+            .post(format!("{}/v1/projects/-/serviceAccounts/test@example.iam.gserviceaccount.com:generateIdToken", iam_server.uri()))
+            .bearer_auth(resp.access_token)
+            .header("Content-Type", "application/json")
+            .body(
+                serde_json::to_string(&json!({
+                    "audience": "test_impersonation_flow_ok",
+                    "includeEmail": true,
+                }))
+                .unwrap(),
+            )
+            .send()
+            .await
+            .unwrap()
+            .json::<super::GenerateIdTokenResponse>()
+            .await
+            .unwrap();
+
+        assert_eq!(token_resp.token, "test-impersonation-token");
+    }
+
+    #[tokio::test]
+    async fn test_impersonation_flow_access_token_error() {
+        let server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path(
+                "/computeMetadata/v1/instance/service-accounts/default/token",
+            ))
+            .respond_with(wiremock::ResponseTemplate::new(500))
+            .mount(&server)
+            .await;
+
+        let detector = Gcp {
+            client: build_test_client(&server),
+            substrategy: super::GcpSubstrategy::Impersonation {
+                service_account_name: TEST_SERVICE_ACCOUNT.into(),
+            },
+        };
+
+        assert!(matches!(
+            detector
+                .detect("test_impersonation_flow_access_token_error")
+                .await,
+            Err(super::Error::AccessTokenRequest(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_impersonation_flow_id_token_error() {
+        let server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path(
+                "/computeMetadata/v1/instance/service-accounts/default/token",
+            ))
+            .respond_with(
+                wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                    "access_token": "test-access-token"
+                })),
+            )
+            .mount(&server)
+            .await;
+
+        Mock::given(method("POST"))
+            .and(path("/v1/projects/-/serviceAccounts/test@example.iam.gserviceaccount.com:generateIdToken"))
+            .respond_with(wiremock::ResponseTemplate::new(403))
+            .mount(&server)
+            .await;
+
+        let detector = Gcp {
+            client: build_test_client(&server),
+            substrategy: super::GcpSubstrategy::Impersonation {
+                service_account_name: TEST_SERVICE_ACCOUNT.into(),
+            },
+        };
+
+        assert!(matches!(
+            detector
+                .detect("test_impersonation_flow_id_token_error")
+                .await,
+            Err(super::Error::ExchangeIdTokenRequest(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_impersonation_flow_invalid_access_token_response() {
+        let server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path(
+                "/computeMetadata/v1/instance/service-accounts/default/token",
+            ))
+            .respond_with(
+                wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                    "invalid": "response"
+                })),
+            )
+            .mount(&server)
+            .await;
+
+        let detector = Gcp {
+            client: build_test_client(&server),
+            substrategy: super::GcpSubstrategy::Impersonation {
+                service_account_name: TEST_SERVICE_ACCOUNT.into(),
+            },
+        };
+
+        assert!(matches!(
+            detector
+                .detect("test_impersonation_flow_invalid_access_token_response")
+                .await,
+            Err(super::Error::AccessTokenRequest(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_impersonation_flow_invalid_id_token_response() {
+        let server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path(
+                "/computeMetadata/v1/instance/service-accounts/default/token",
+            ))
+            .respond_with(
+                wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                    "access_token": "test-access-token"
+                })),
+            )
+            .mount(&server)
+            .await;
+
+        Mock::given(method("POST"))
+            .and(path("/v1/projects/-/serviceAccounts/test@example.iam.gserviceaccount.com:generateIdToken"))
+            .respond_with(
+                wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                    "invalid": "response"
+                })),
+            )
+            .mount(&server)
+            .await;
+
+        let detector = Gcp {
+            client: build_test_client(&server),
+            substrategy: super::GcpSubstrategy::Impersonation {
+                service_account_name: TEST_SERVICE_ACCOUNT.into(),
+            },
+        };
+
+        assert!(matches!(
+            detector
+                .detect("test_impersonation_flow_invalid_id_token_response")
+                .await,
+            Err(super::Error::ExchangeIdTokenRequest(_))
+        ));
+    }
+}
