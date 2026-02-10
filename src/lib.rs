@@ -93,6 +93,12 @@ pub struct Detector {
     state: DetectionState,
 }
 
+impl Default for Detector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Detector {
     /// Creates a new detector with default settings.
     pub fn new() -> Self {

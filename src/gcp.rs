@@ -95,7 +95,7 @@ impl DetectionStrategy for Gcp {
                     .header("Metadata-Flavor", "Google")
                     .send()
                     .await
-                    .map_err(|e| Error::AccessTokenRequest(e.into()))?
+                    .map_err(Error::AccessTokenRequest)?
                     .error_for_status()
                     .map_err(|e| Error::AccessTokenRequest(e.into()))?
                     .json::<AccessTokenResponse>()
@@ -120,7 +120,7 @@ impl DetectionStrategy for Gcp {
                     )
                     .send()
                     .await
-                    .map_err(|e| Error::ExchangeIdTokenRequest(e.into()))?
+                    .map_err(Error::ExchangeIdTokenRequest)?
                     .error_for_status()
                     .map_err(|e| Error::ExchangeIdTokenRequest(e.into()))?
                     .json::<GenerateIdTokenResponse>()
@@ -138,7 +138,7 @@ impl DetectionStrategy for Gcp {
                     .query(&[("audience", audience)])
                     .send()
                     .await
-                    .map_err(|e| Error::IdTokenRequest(e.into()))?
+                    .map_err(Error::IdTokenRequest)?
                     .error_for_status()
                     .map_err(|e| Error::IdTokenRequest(e.into()))?
                     .text()
