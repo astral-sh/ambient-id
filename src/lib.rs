@@ -24,9 +24,9 @@
 use reqwest_middleware::ClientWithMiddleware;
 use secrecy::{ExposeSecret, SecretString};
 
-mod gcp;
 mod buildkite;
 mod circleci;
+mod gcp;
 mod github;
 mod gitlab;
 
