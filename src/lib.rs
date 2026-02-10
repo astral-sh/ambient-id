@@ -4,6 +4,7 @@
 //!
 //! * GitHub Actions (with `id-token: write`)
 //! * GitLab CI
+//! * Buildkite
 //!
 //! # Usage
 //!
@@ -24,9 +25,12 @@ use reqwest_middleware::ClientWithMiddleware;
 use secrecy::{ExposeSecret, SecretString};
 
 mod gcp;
+mod buildkite;
+mod circleci;
 mod github;
 mod gitlab;
 
+pub use buildkite::Error as BuildkiteError;
 pub use github::Error as GitHubError;
 pub use gitlab::Error as GitLabError;
 
@@ -60,6 +64,12 @@ pub enum Error {
     /// An error occurred while detecting GCP credentials.
     #[error("GCP detection error")]
     Gcp(#[from] gcp::Error),
+    /// An error occurred while detecting Buildkite credentials.
+    #[error("Buildkite detection error")]
+    Buildkite(#[from] buildkite::Error),
+    /// An error occurred while detecting CircleCI credentials.
+    #[error("CircleCI detection error")]
+    CircleCI(#[from] circleci::Error),
 }
 
 #[derive(Default)]
@@ -127,7 +137,13 @@ impl Detector {
         };
     }
 
-        detect!(github::GitHubActions, gitlab::GitLabCI, gcp::Gcp)
+        detect!(
+            gcp::Gcp,
+            github::GitHubActions,
+            gitlab::GitLabCI,
+            buildkite::Buildkite,
+            circleci::CircleCI
+        )
     }
 }
 
@@ -201,6 +217,8 @@ mod tests {
         let mut scope = EnvScope::new();
         scope.unsetenv("GITHUB_ACTIONS");
         scope.unsetenv("GITLAB_CI");
+        scope.unsetenv("BUILDKITE");
+        scope.unsetenv("CIRCLECI");
 
         let detector = Detector::new();
 
