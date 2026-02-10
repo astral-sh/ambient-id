@@ -68,7 +68,7 @@ impl DetectionStrategy for Gcp {
             // Look for a well-known product name in the DMI product name file.
             let product_name = std::fs::read_to_string(GCP_PRODUCT_NAME_FILE).ok()?;
 
-            if GCP_PRODUCT_NAMES.contains(&product_name.as_str()) {
+            if GCP_PRODUCT_NAMES.contains(&product_name.trim()) {
                 Some(Self {
                     client: state.client.clone(),
                     substrategy: GcpSubstrategy::Direct,
@@ -92,6 +92,7 @@ impl DetectionStrategy for Gcp {
                 let resp = self
                     .client
                     .get(GCP_TOKEN_REQUEST_URL)
+                    .query(&[("scopes", "https://www.googleapis.com/auth/cloud-platform")])
                     .header("Metadata-Flavor", "Google")
                     .send()
                     .await
@@ -111,6 +112,7 @@ impl DetectionStrategy for Gcp {
                     .client
                     .post(id_token_request_url)
                     .bearer_auth(resp.access_token)
+                    .header("Content-Type", "application/json")
                     .body(
                         serde_json::to_string(&json!({
                             "audience": audience,
@@ -135,7 +137,7 @@ impl DetectionStrategy for Gcp {
                     .client
                     .get(GCP_IDENTITY_REQUEST_URL)
                     .header("Metadata-Flavor", "Google")
-                    .query(&[("audience", audience)])
+                    .query(&[("audience", audience), ("format", "full")])
                     .send()
                     .await
                     .map_err(Error::IdTokenRequest)?
