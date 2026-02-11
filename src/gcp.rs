@@ -8,9 +8,9 @@ use crate::{DetectionStrategy, IdToken};
 
 const GCP_PRODUCT_NAME_FILE: &str = "/sys/class/dmi/id/product_name";
 const GCP_TOKEN_REQUEST_URL: &str =
-    "http://metadata/computeMetadata/v1/instance/service-accounts/default/token";
+    "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token";
 const GCP_IDENTITY_REQUEST_URL: &str =
-    "http://metadata/computeMetadata/v1/instance/service-accounts/default/identity";
+    "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity";
 
 const GCP_PRODUCT_NAMES: &[&str] = &["Google", "Google Compute Engine"];
 
@@ -171,7 +171,7 @@ mod tests {
         reqwest_middleware::ClientBuilder::new(
             reqwest::Client::builder()
                 .resolve(
-                    "metadata",
+                    "metadata.google.internal",
                     std::net::SocketAddr::from(([127, 0, 0, 1], server.address().port())),
                 )
                 .build()
