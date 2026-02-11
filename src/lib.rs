@@ -26,6 +26,7 @@ use secrecy::{ExposeSecret, SecretString};
 
 mod buildkite;
 mod circleci;
+mod gcp;
 mod github;
 mod gitlab;
 
@@ -60,6 +61,9 @@ pub enum Error {
     /// An error occurred while detecting GitLab CI credentials.
     #[error("GitLab CI detection error")]
     GitLabCI(#[from] GitLabError),
+    /// An error occurred while detecting GCP credentials.
+    #[error("GCP detection error")]
+    Gcp(#[from] gcp::Error),
     /// An error occurred while detecting Buildkite credentials.
     #[error("Buildkite detection error")]
     Buildkite(#[from] buildkite::Error),
@@ -87,6 +91,12 @@ trait DetectionStrategy {
 /// Detector for ambient OIDC credentials.
 pub struct Detector {
     state: DetectionState,
+}
+
+impl Default for Detector {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Detector {
@@ -134,6 +144,7 @@ impl Detector {
     }
 
         detect!(
+            gcp::Gcp,
             github::GitHubActions,
             gitlab::GitLabCI,
             buildkite::Buildkite,

@@ -36,18 +36,15 @@ impl DetectionStrategy for Buildkite {
     /// The standard output of this command is the ID token on success.
     async fn detect(&self, audience: &str) -> Result<crate::IdToken, Self::Error> {
         let output = std::process::Command::new("buildkite-agent")
-            .args(&["oidc", "request-token", "--audience", audience])
+            .args(["oidc", "request-token", "--audience", audience])
             .output()?;
 
         if !output.status.success() {
-            return Err(Error::Execution(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!(
-                    "`buildkite-agent` exited with code {status}: '{stderr}'",
-                    status = output.status,
-                    stderr = String::from_utf8_lossy(&output.stderr),
-                ),
-            )));
+            return Err(Error::Execution(std::io::Error::other(format!(
+                "`buildkite-agent` exited with code {status}: '{stderr}'",
+                status = output.status,
+                stderr = String::from_utf8_lossy(&output.stderr),
+            ))));
         }
 
         let token = String::from_utf8_lossy(&output.stdout).trim().to_string();

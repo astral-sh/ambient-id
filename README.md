@@ -54,6 +54,15 @@ following environments:
   
     This crate only uses `--root-issuer`; per-organization issuers aren't
     supported. 
+  
+* Google Cloud Platform
+
+  - On GCP, this crate either performs service account impersonation *or*
+    uses the metadata server to obtain an OIDC token, depending on the
+    environment.
+  
+    If `GOOGLE_SERVICE_ACCOUNT_NAME` is set, the crate performs service account impersonation;
+    otherwise, it uses the metadata server.
 
 ## Development
 
