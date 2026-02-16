@@ -15,8 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'astral-sh' }}
     permissions:
-      contents: write # For the release PR
-      id-token: write # for Trusted Publishing
+      contents: write # Push tags and create releases
+      id-token: write # Trusted Publishing
     environment:
       name: crates.io
       url: https://crates.io/crates/ambient-id
@@ -41,8 +41,8 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'astral-sh' }}
     permissions:
-      pull-requests: write # For the release PR
-      contents: write # For the release PR
+      pull-requests: write # Create and update the release PR
+      contents: write # Write to the release PR
     concurrency:
       group: release-plz-${{ github.ref }}
       cancel-in-progress: false
