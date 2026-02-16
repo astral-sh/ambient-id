@@ -29,7 +29,7 @@ jobs:
       - name: Install Rust toolchain
         run: rustup show
       - name: Run release-plz
-        uses: release-plz/action@52440b50d383aa252927de395c8b2c1e0a9cf8e9 # v0.5
+        uses: release-plz/action@52440b50d383aa252927de395c8b2c1e0a9cf8e9 # v0.5.126
         with:
           version: 0.3.155
           command: release
@@ -55,7 +55,7 @@ jobs:
       - name: Install Rust toolchain
         run: rustup show
       - name: Run release-plz
-        uses: release-plz/action@52440b50d383aa252927de395c8b2c1e0a9cf8e9 # v0.5
+        uses: release-plz/action@52440b50d383aa252927de395c8b2c1e0a9cf8e9 # v0.5.126
         with:
           version: 0.3.155
           command: release-pr
