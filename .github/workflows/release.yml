@@ -19,7 +19,7 @@ jobs:
       id-token: write # for Trusted Publishing
 
     environment:
-      name: crates.io
+      name: release
       url: https://crates.io/crates/ambient-id
 
     steps:
